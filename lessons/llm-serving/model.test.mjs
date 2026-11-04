@@ -1,0 +1,22 @@
+import { test, expect } from 'bun:test';
+import * as M from './model.mjs';
+import content from './content.mjs';
+
+const mission = id => M.MISSIONS.find(m => m.id === id);
+test('FP16 weights use two bytes per parameter', () => expect(M.weightBytes()).toBe(16_060_000_000));
+test('FP32 weights use four bytes per parameter', () => expect(M.weightBytes(4)).toBe(32_120_000_000));
+test('FP16 KV counts K and V across all layers and KV heads', () => expect(M.kvBytesPerToken()).toBe(131_072));
+test('FP8 KV halves storage; MHA uses four times the GQA heads', () => { expect(M.kvBytesPerToken(32,8,128,1)).toBe(65_536); expect(M.kvBytesPerToken(32,32,128,2)).toBe(524_288); });
+test('the memory ledger reserves margin, weights and overhead', () => { const m=M.memory(); expect([m.budget,m.outside,m.overhead,m.kvPool]).toEqual([72e9,8e9,4e9,51.94e9]); });
+test('KV capacity rounds down before and after paging', () => { const m=M.memory(); expect([m.rawTokens,m.blockBytes,m.blocks,m.tokens,m.maxSeqs]).toEqual([396270,2097152,24766,396256,48]); });
+test('1000 tokens require 63 blocks with eight unused slots', () => expect(M.pageLayout(1000)).toEqual({tokens:1000,blocks:63,slots:1008,waste:8}));
+test('FP8 KV fits 96 full contexts; INT8 weights fit 55 with FP16 KV', () => { expect(M.memory({kvBytes:1}).maxSeqs).toBe(96); expect(M.memory({weightDtypeBytes:1}).maxSeqs).toBe(55); });
+test('prefill and weight-only timing use decimal hardware rates', () => { expect(M.prefillMs(1000)).toBe(80.3); expect(M.weightReadMs()).toBe(8.03); });
+test('decode includes KV reads in the bandwidth bound', () => expect(M.decodeStep([1000])).toEqual({ms:8.095536,kvRead:131072000,memoryMs:8.095536,computeMs:0.0803,bound:'memory'}));
+test('all documented answers remain pinned', () => expect(M.ANSWERS).toEqual({weightsGB:16.06,kv:131072,capacity:396270,phase:'prefill-compute',blocks:63,waste:8,decodeMs:8.03,fp8Seqs:96}));
+test('numeric and phase missions accept their answers and reject common errors', () => { for (const [id,good,bad] of [['weights',16.06,32.12],['kv',131072,65536],['capacity',396270,610351],['pages',63,62],['speed',8.03,.00803],['quantize',96,55]]) { expect(mission(id).check({value:good})).toBe(true); expect(mission(id).check({value:bad})).toBe(false); } expect(mission('phase').check({choice:'prefill-compute'})).toBe(true); expect(mission('phase').check({choice:'both-compute'})).toBe(false); });
+test('Python mission requires a successful run', () => { expect(mission('python').check({passed:true})).toBe(true); expect(mission('python').check({passed:false})).toBe(false); expect(M.PY_TESTS.split('\n')).toHaveLength(5); });
+test('batch mission requires all simulated limits', () => { expect(mission('batch').check({maxSeqs:32,chunked:true})).toBe(true); for (const input of [{maxSeqs:4,chunked:true},{maxSeqs:32,chunked:false},{maxSeqs:64,chunked:true}]) expect(mission('batch').check(input)).toBe(false); });
+test('traffic model is deterministic and conserves all output tokens', () => { const c={maxSeqs:32,chunked:true}; const r=M.simulate(c); expect(M.simulate(c)).toEqual(r); expect(r.totals.tokens).toBe(2304); expect(Math.round(r.totals.throughput)).toBe(489); expect(Math.round(r.totals.ttft)).toBe(3125); expect(r.events.every((e,i)=>e.index===i && e.trace && (!i || e.clock>=r.events[i-1].clock))).toBe(true); });
+test('page allocation reuses freed noncontiguous blocks without moving existing pages', () => { const a=M.pagingExample(); expect(a.table.A).toHaveLength(64); expect(a.table.A.at(-1)).toBe(67); expect(a.table.D).toEqual([63,64,65,66]); });
+test('checkpoint has the six required stages', () => { expect(content.quiz.map(q=>q.stage)).toEqual(['pre','check','check','check','post','post']); expect(content.quiz.every(q=>q.correct>=0 && q.correct<q.options.length)).toBe(true); });

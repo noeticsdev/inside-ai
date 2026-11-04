@@ -1,0 +1,35 @@
+/* Lesson-local server geometry and close-ups. Shared guide runtime remains untouched. */
+.sv-code { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.6 var(--ia-mono); color: var(--ia-strong); }
+.gd-close-body .sv-code + .cu-cap { margin-top: 10px; }
+.gd-close-body .cu-chain { margin-bottom: 12px; }
+.sv-route { stroke: var(--ia-accent); stroke-width: 1; fill: none; }
+.sv-weights { fill: var(--ia-accent); stroke: var(--ia-strong); stroke-width: 1; }
+.sv-kv { fill: var(--ia-accent-soft); stroke: var(--ia-strong); stroke-width: 1; }
+.sv-overhead { fill: var(--ia-muted); stroke: var(--ia-strong); stroke-width: 1; }
+.sv-outside { fill: var(--ia-sunk); stroke: var(--ia-muted); stroke-width: 1; }
+.sv-page { fill: var(--ia-accent-soft); stroke: var(--ia-accent); stroke-width: 1; }
+.sv-owner-1 { fill: var(--ia-accent-soft); }
+.sv-owner-2 { fill: var(--ia-ok-soft); stroke: var(--ia-ok); }
+.sv-owner-0 { fill: var(--ia-sunk); stroke: var(--ia-muted); }
+.sv-fresh .sv-page { stroke-width: 2; }
+.gd-board .hw-label { font-size: 16px; }
+.gd-board .hw-sub { font-size: 14px; }
+.gd-close-head { flex-wrap: wrap; }
+.gd-select { max-width: 100%; height: 46px; }
+.gd-board svg { max-height: 61vh; }
+.gd-bench .sv-code { padding: 14px; border: 1px solid var(--ia-line); border-radius: 12px; background: var(--ia-page); }
+@media (max-width:900px) {
+  .gd-board svg { min-width: 940px; }
+  .gd-board { padding-top: 64px; }
+  .gd-close-body .metrics { grid-template-columns: 1fr; }
+}
+.sv-owner-label { font: 13px var(--ia-mono); fill: var(--ia-strong); }
+.sv-stream { margin-top: 8px; font-size: 13px; color: var(--ia-muted); }
+.sv-stream summary { cursor: pointer; }
+.sv-stream pre { margin-top: 8px; }
+.gd-config pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width:900px) {
+  .gd-board::before { content: 'Swipe to inspect the server →'; display: block; position: sticky; left: 0; font: 12px var(--ia-mono); color: var(--ia-muted); padding-bottom: 8px; }
+  .gd-close-body svg { min-width: 760px; }
+  .gd-close-body:has(svg)::before { content: 'Swipe to inspect the close-up →'; display: block; position: sticky; left: 0; font: 12px var(--ia-mono); color: var(--ia-muted); padding-bottom: 8px; }
+}
