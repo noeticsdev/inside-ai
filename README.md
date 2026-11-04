@@ -6,24 +6,38 @@ A workshop of interactive machines: real arithmetic, controls you can touch, mis
 
 ## Run locally
 
-Use **Bun 1.4**. Once machine folders are present:
+Use **Bun 1.4**:
 
 ```sh
 bun install && bun run build && bun run start
 ```
 
-Open http://localhost:3000. SQLite is created at `data/inside-ai.db`; migrations run on startup. No environment variables are needed locally.
+Open http://localhost:3000. SQLite is created at `data/inside-ai.db` and migrations run on startup. No environment variables are needed locally. Deploying: see [DEPLOY.md](DEPLOY.md).
 
-This platform worktree currently contains only `_template`, which the production builder deliberately excludes. For the nine-card **development preview**:
+## The machines
+
+| # | Machine | Track | Level |
+| --- | --- | --- | --- |
+| 01 | Inside a tokenizer (BPE merges) | language | starter |
+| 02 | Inside embeddings (cosine vs keyword search) | language | starter |
+| 03 | Inside an attention head (QKᵀ/√d, softmax, masking) | language | core |
+| 04 | Inside next-token sampling (temperature, top-k, top-p) | language | core |
+| 05 | Inside training a neural net (backprop on XOR) | learning | core |
+| 06 | Inside a RAG pipeline (chunk, embed, retrieve, cite) | systems | core |
+| 07 | Inside an AI agent (tool loop, budget, approval gate) | systems | advanced |
+| 08 | Inside LLM serving (KV cache, continuous batching) | systems | advanced |
+| 09 | Inside a video-analytics pipeline (DeepStream pattern) | systems | advanced |
+
+Every machine runs on a pure, tested model, and the numbers on screen come from real arithmetic. Each one has 4 missions the model checks and a 6-question checkpoint (1 prediction plus 5 questions).
+
+## Check everything
 
 ```sh
-bun install
-bun scripts/build.mjs --only _template
-bun tests/preview-platform.mjs
-bun run start
+bun test                                # every model and server test
+bun run build && bun run verify         # headless Chrome: every machine, both themes, phone
+bun tests/verify-platform.mjs           # landing, login, dashboards, educator insights
+PORT=3917 bun run start & bun tests/e2e-machine.mjs http://127.0.0.1:3917 tokenizer
 ```
-
-The preview has illustrative catalog entries and template thumbnails; each gallery card opens the real template. `dist/` is disposable and must never be committed or deployed as the finished catalog. Production builds need the nine real machine folders merged first.
 
 ## Project map
 
