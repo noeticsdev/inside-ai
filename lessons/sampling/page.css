@@ -1,0 +1,34 @@
+.sam-panel{fill:var(--ia-card);stroke:var(--ia-line);stroke-width:1}
+.sam-fresh{fill:var(--ia-accent-soft);stroke:var(--ia-accent);stroke-width:1}
+.sam-ghost{fill:var(--ia-page);stroke:var(--ia-line);stroke-width:1;stroke-dasharray:4 4}
+.sam-h,.sam-t,.sam-b,.sam-m,.sam-a,.sam-bad,.sam-code,.sam-code-a,.sam-chip-t,.sam-seg-t-on{font-family:var(--ia-mono);font-size:15px;fill:var(--ia-strong)}
+.sam-h,.sam-b,.sam-a{font-weight:700}
+.sam-h,.sam-m,.sam-code,.sam-code-a{font-size:14px}
+.sam-m{fill:var(--ia-muted)}
+.sam-a,.sam-code-a{fill:var(--ia-accent)}
+.sam-bad{fill:var(--ia-bad)}
+.sam-bar,.sam-seg-on{fill:var(--ia-accent)}
+.sam-logit,.sam-seg{fill:var(--ia-accent-soft);stroke:var(--ia-accent);stroke-width:1}
+.sam-cut{fill:var(--ia-sunk);stroke:var(--ia-line);stroke-width:1}
+.sam-was{fill:none;stroke:var(--ia-strong);stroke-width:1;stroke-dasharray:3 2}
+.sam-cum{fill:none;stroke:var(--ia-muted);stroke-width:1;stroke-dasharray:2 2}
+.sam-seg-was{fill:var(--ia-accent-soft);stroke:var(--ia-muted);stroke-width:1}
+.sam-axis,.sam-rule{stroke:var(--ia-line);stroke-width:1}
+.sam-marker{fill:none;stroke:var(--ia-strong);stroke-width:2}
+.sam-thresh{stroke:var(--ia-bad);stroke-width:1.5;stroke-dasharray:4 3}
+.sam-chip{fill:var(--ia-page);stroke:var(--ia-line);stroke-width:1}
+.sam-chip-g{fill:var(--ia-accent-soft);stroke:var(--ia-accent)}
+.sam-chip-x,.sam-chip-e{fill:var(--ia-accent);stroke:var(--ia-accent)}
+.sam-chip-q{stroke-dasharray:3 2}
+.sam-chip-t-x,.sam-chip-t-e,.sam-seg-t-on,.sam-cu-on{fill:white}
+.sam-cu-on{font:13px var(--ia-mono);font-weight:700}
+.sam-cu-cum{fill:none;stroke:var(--ia-strong);stroke-width:1.5}
+.gd-config pre{white-space:pre-wrap;overflow-wrap:anywhere}
+/* Accent text stays legible when the dark theme uses a pale accent. */
+.sam-chip-t-x,.sam-chip-t-e,.sam-seg-t-on,.sam-cu-on{fill:var(--ia-page)}
+@media(max-width:900px){
+  .gd-board::before{content:'Swipe to inspect the full pipeline →';display:block;margin-bottom:8px;font:12px var(--ia-mono);color:var(--ia-muted)}
+  .gd-close-head{flex-wrap:wrap}
+  .gd-close-body::before{content:'Swipe to inspect the close-up →';display:block;margin-bottom:10px;font:12px var(--ia-mono);color:var(--ia-muted)}
+  .gd-close-body svg{min-width:760px}
+}
