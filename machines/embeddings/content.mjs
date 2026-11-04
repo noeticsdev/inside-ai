@@ -1,0 +1,30 @@
+export default {
+  slug: "embeddings",
+  title: "Inside embeddings",
+  hook: "Meaning is a direction, not a word.",
+  level: "starter",
+  minutes: 10,
+  order: 2,
+  track: "language",
+  bigIdea: "Each text becomes an arrow in meaning-space; similar meanings point the same way, and the angle between arrows is the similarity.",
+  machine: "A query needle swings over a ring of sentence cards on a brass compass table, a protractor arm reads each angle, and that motion means ranking by meaning instead of by shared words.",
+  stations: [
+    { id: "query", concept: "QUERY", does: "Drops the query card onto the centre pivot.", fails: "No question, no ranking." },
+    { id: "ring", concept: "VECTORS", does: "Holds one hand-set 6D arrow per sentence card.", fails: "No arrows, nothing to compare." },
+    { id: "angle", concept: "ANGLE", does: "Reads the angle between the query needle and each card.", fails: "Angles unknown, ranking is guesswork." },
+    { id: "rack", concept: "RANK", does: "Lifts the top-k cards into numbered slots.", fails: "Scores never become an answer." },
+  ],
+  quiz: [
+    { stage: "pre", question: "Query “puppy”. Which card should a meaning search return first?", options: ["“pizza oven cheese hot”", "“young dog runs meadow”", "“encyclopedia lists every topic fact archive”", "“bank approves loan house”"], correct: 1, explanation: "You saw the needle swing closest to “young dog runs meadow”: same direction, zero shared words." },
+    { stage: "check", question: "What does cosine similarity measure?", options: ["The number of shared words", "The length of the longest vector", "The angle between two arrows", "The age of the sentence"], correct: 2, explanation: "The protractor arm read the angle: 1.0° for the puppy–dog pair, near 90° for unrelated cards." },
+    { stage: "check", question: "Why did the encyclopedia card win on raw dot product?", options: ["It shares the most words", "Its arrow is the longest, and raw dot rewards length", "It was lifted into slot 1 first", "The mixer boosted its axes"], correct: 1, explanation: "Its score was 2.379 against 1.2-ish for the real matches: length, not direction, won until normalise went on." },
+    { stage: "check", question: "What does the normalise switch do?", options: ["It removes stopwords from the query", "It trims every arrow to unit length so direction decides", "It widens the rack to hold more cards", "It reprints the cards in order"], correct: 1, explanation: "With normalise on, dot product equals cosine and the puppy query tops “young dog runs meadow” again." },
+    { stage: "post", question: "Query “puppy” under keyword search ranks the right card #9. Why?", options: ["The angle to it is nearly 90°", "It shares no keywords; one wrong card matches “puppy” exactly", "Normalise was switched off", "k was set below 3"], correct: 1, explanation: "Keyword counting found “puppy chases ball park” and buried the paraphrase with zero shared words at #9." },
+    { stage: "post", question: "The drawing shows each card as a flat needle, but the score uses 6 numbers. Why is that honest?", options: ["The page says the drawing projects 6D to 2D and scores with all 6", "Needles are only decoration for the rack", "Angles look the same in any dimension", "The quiz excuses all drawings"], correct: 0, explanation: "The note under the controls says it plainly: the projection is for your eyes, the cosine uses all six axes." },
+  ],
+  sources: [
+    { label: "Mikolov et al. 2013: Efficient Estimation of Word Representations", url: "https://arxiv.org/abs/1301.3781" },
+    { label: "Reimers & Gurevych 2019: Sentence-BERT", url: "https://arxiv.org/abs/1908.10084" },
+  ],
+  notes: "Hand-set 6-dimensional vectors, stated honestly; real models learn thousands of dimensions. The drawing projects 6D to 2D; the score uses all 6.",
+};
