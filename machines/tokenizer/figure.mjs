@@ -4,9 +4,7 @@
 // 40-drawer type case and the counter dial, plus empty hooks for live groups.
 import * as k from "../../kit/iso-kit.mjs";
 import * as ink from "../../kit/ink.mjs";
-import { MERGES } from "./model.mjs";
 
-const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export function figure() {
   const W = 760;
@@ -103,8 +101,7 @@ export function figure() {
   put("stileL", "case", [-72, -26, 14], box(-74, -26.6, 2.5, -71.4, -25.4, 26, { tone: "lo" }, 0.4), 2);
   put("stileR", "case", [4, -26, 14], box(2.4, -26.6, 2.5, 5, -25.4, 26, { tone: "lo" }, 0.4), 2);
   put("caseplate", "case", [-34, -25.8, 24],
-    S(k.slabOf({ x: -46, y: -26.4, w: 24, d: 0.8, r: 0.5 }, 22.6, 1.6, P, 3), { tone: "lo" }) +
-    k.faceTextSvg(k.sideMatrix([-40.5, -25.5], 23.2, P, "left"), "BPE · 40 MERGES", { size: 1.7, tone: "mid", anchor: "middle" }), 3);
+    S(k.slabOf({ x: -46, y: -26.4, w: 24, d: 0.8, r: 0.5 }, 22.6, 1.6, P, 3), { tone: "lo" }), 3);
   // drawer slots (always drawn) + drawer fronts (live reveals what training earned)
   const DX0 = -70.2, DZ0 = 4.2, CW = 9.3, CH = 3.9;
   {
@@ -119,11 +116,9 @@ export function figure() {
   for (let i = 0; i < 40; i++) {
     const col = i % 8, row = Math.floor(i / 8);
     const x = DX0 + col * CW, z = DZ0 + (4 - row) * CH;
-    const label = esc(MERGES[i] ? MERGES[i].into.slice(0, 6) : "");
     const front =
       S(k.slabOf({ x, y: -26.9, w: 8.5, d: 1, r: 0.35 }, z, 3.1, P, 2), { tone: "hi" }) +
-      box(x + 2.6, -26.5, z + 2.2, x + 5.9, -25.9, z + 2.7, { tone: "lo" }, 0.25) +
-      k.faceTextSvg(k.sideMatrix([x + 4.25, -25.85], z + 0.95, P, "left"), label, { size: 1.55, tone: "mid", anchor: "middle" });
+      box(x + 2.6, -26.5, z + 2.2, x + 5.9, -25.9, z + 2.7, { tone: "lo" }, 0.25);
     put(`drawer${i}`, "case", [x + 4.25, -26, z + 1.5], `<g data-live="drawer${i}" style="display:none">${front}</g>`, 2.5 + (i % 8) * 0.01);
   }
 
@@ -148,15 +143,15 @@ export function figure() {
 
   const LABELS = [
     { asm: "stick", at: [-46, 13, 8.5], dx: -84, dy: -58 },
-    { asm: "press", at: [0, 14, 21], dx: 30, dy: -92 },
+    { asm: "press", at: [54, 14, 6], dx: 30, dy: -105 },
     { asm: "case", at: [-52, -32, 28.5], dx: -40, dy: -64 },
     { asm: "dial", at: [46, -18, 5], dx: 78, dy: -46 },
   ];
   const V = [depth([1, 0, 0]), depth([0, 1, 0]), depth([0, 0, 1])];
   const data = {
     P, V, EXPLODE, LABELS, CONCEPT,
-    STICK: { x0: -62, y0: 9.2, d: 4.6, z0: 2.5, h: 6, w0: 2.2, wk: 1.55, gap: 0.65, max: 28 },
-    PRESS: { home: 58, y: 11.5 },
+    STICK: { x0: -65, x1: 53, y0: 9.2, d: 5.6, z0: 2.5, h: 7, w0: 1.5, wk: 4.0, gap: 0.5, max: 20, moreWidth: 17 },
+    PRESS: { home: 62, y: 11.5 },
     DIAL: [DCX, DCY, 4.2, 60],
     DRAWERS: 40,
     items: items.map(({ id, asm, key }) => ({ id, asm, key })),
@@ -178,6 +173,12 @@ export function figure() {
     { key: "vocab", label: "Vocabulary" },
     { key: "last", label: "Last merge" },
   ];
-  const css = `.iso-face-text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}`;
+  const css = `.iso-face-text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    [data-sort] .iso-top{fill:#faf7e9!important}
+    [data-sort] .iso-shade{fill:#d9d3c0!important}
+    [data-sort] .iso-edge{stroke:#26304a!important}
+    [data-sort] .iso-face-text{fill:#141b2c!important;font-weight:800;letter-spacing:0}
+    [data-sort][data-fused] .iso-top{fill:#c9bfff!important}
+    [data-sort][data-fused] .iso-shade{fill:#a999f0!important}`;
   return { svg, data, css, controls, readouts };
 }
