@@ -1,0 +1,12 @@
+import { test, expect } from 'bun:test';
+import * as M from './model.mjs';
+import content from './content.mjs';
+test('default loss and accuracy are reproducible',()=>{const r=M.simulate();expect(r.totals.initialLoss.toFixed(4)).toBe('1.0575');expect(r.totals.accuracy).toBe(4);expect(r.totals.step).toBe(50)});
+test('tuned XOR reaches the printed values',()=>{const t=M.simulate({rate:.5}).totals;expect(t.loss.toFixed(4)).toBe('0.0413');expect(t.accuracy).toBe(4);expect(t.maxGradient.toFixed(4)).toBe('0.0488');expect(t.changeNorm.toFixed(4)).toBe('0.0517')});
+test('linear network settles at one quarter',()=>expect(M.simulate({activation:'none',rate:.1,steps:200}).totals.loss.toFixed(4)).toBe('0.2500'));
+test('large rate is guarded',()=>expect(M.simulate({rate:5}).totals.diverged).toBe(true));
+test('determinism and event invariants across a representative grid',()=>{for(const activation of ['tanh','relu','none']) for(const rate of [.01,.5,5]) for(const hidden of [2,4,6]) {const c={activation,rate,hidden,seed:3,steps:10},r=M.simulate(c);expect(M.simulate(c)).toEqual(r);r.events.forEach((e,i)=>{expect(e.index).toBe(i);expect(e.trace.length).toBeGreaterThan(0);expect(Number.isFinite(e.loss)).toBe(true)})}});
+test('URL round trips and garbage falls back',()=>{const c={activation:'relu',rate:.2,hidden:6,steps:200,seed:10};expect(M.decode('?'+M.encode(c))).toEqual(c);expect(M.decode('?activation=x&rate=x&hidden=x&steps=x&seed=x')).toEqual(M.DEFAULTS)});
+test('every mission has a reachable passing configuration',()=>{for(const m of M.MISSIONS){expect(M.configOf(m.try)).toEqual(m.try);expect(m.check(M.simulate(m.try))).toBe(true)}expect(M.MISSIONS.every(m=>m.check(M.simulate()))).toBe(false)});
+test('quiz stages and choices are valid',()=>{expect(content.quiz.map(q=>q.stage)).toEqual(['pre','check','check','check','post','post']);for(const q of content.quiz){expect(q.options).toHaveLength(4);expect(q.correct).toBeGreaterThanOrEqual(0);expect(q.correct).toBeLessThan(4);expect(q.explanation.length).toBeGreaterThan(10)}});
+test('the gradient update norm scales with learning rate',()=>{const a=M.simulate({rate:.1,steps:10}).events[0],b=M.simulate({rate:.2,steps:10}).events[0];expect(b.changeNorm).toBeCloseTo(2*a.changeNorm,12)});
