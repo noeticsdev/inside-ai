@@ -6,5 +6,9 @@
     "build": "bun scripts/build.mjs",
     "verify": "bun scripts/verify.mjs",
     "test": "bun test"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "hono": "^4.13.16"
   }
 }
