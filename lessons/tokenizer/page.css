@@ -1,0 +1,37 @@
+/* Tokenizer board and close-ups. Board text stays 13 to 16 units in the 1000-wide viewBox. */
+.tk-big { font: 700 26px var(--ia-mono); fill: var(--ia-strong); }
+.tk-char { font-size: 19px; font-weight: 700; fill: var(--ia-strong); }
+.tk-char-m { font-size: 16px; font-weight: 700; fill: var(--ia-muted); }
+.tk-chip { font-size: 16px; font-weight: 700; fill: var(--ia-strong); }
+.tk-chip-s { font-size: 13.5px; font-weight: 700; fill: var(--ia-strong); }
+.tk-id { font-size: 16px; fill: var(--ia-strong); }
+.tk-hex { font-size: 13.5px; fill: var(--ia-muted); }
+.tk-q { font-size: 14.5px; font-weight: 700; fill: var(--ia-muted); }
+.tk-corpus { font-size: 16px; fill: var(--ia-strong); }
+.tk-label-m { font-size: 16px; font-weight: 700; fill: var(--ia-muted); }
+.tk-label-a { font-size: 16px; font-weight: 700; fill: var(--ia-accent); }
+.tk-ghost { fill: none; stroke: var(--ia-line); stroke-width: 1.25; stroke-dasharray: 6 4; }
+.tk-panel-on { fill: var(--ia-page); stroke: var(--ia-accent); stroke-width: 1.75; }
+.tk-cell { fill: var(--ia-sunk); stroke: var(--ia-line); stroke-width: 1; }
+.tk-cell-on { font-size: 13px; font-weight: 700; fill: var(--ia-accent); }
+.tk-cost { fill: var(--ia-card); stroke: var(--ia-bad); stroke-width: 1.5; }
+.tk-curve { fill: none; stroke: var(--ia-accent); stroke-width: 2.25; }
+.tk-cursor { stroke: var(--ia-accent); stroke-width: 1; stroke-dasharray: 3 3; }
+.tk-dot { fill: var(--ia-accent); }
+.tk-bad-big { font-size: 24px; font-weight: 700; fill: var(--ia-bad); }
+/* The extra space in the regex exercise is data, including in its task prompt. */
+.gd-task p, .gd-close-body svg text { white-space: pre-wrap; }
+.gd-board .ro-t, .gd-board .ro-v, .gd-board .ro-a, .gd-board .tk-q { font-size: 16px; }
+@media (max-width: 900px) {
+  .gd-close-body .tk-chart { min-width: 0; }
+  .gd-board::before {
+    content: 'Swipe sideways to inspect the full board →';
+    display: block;
+    position: sticky;
+    left: 0;
+    width: 320px;
+    margin-bottom: 8px;
+    color: var(--ia-muted);
+    font: 11.5px var(--ia-mono);
+  }
+}
