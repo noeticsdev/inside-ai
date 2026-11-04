@@ -73,8 +73,8 @@ ${live}
 }
 
 // A standalone light-theme still of the machine for catalog cards: the page CSS is embedded in the SVG.
-function thumbnail(svg) {
-  const css = `${kit.ISO_CSS}${inkKit.INK_CSS}`.replace(/<\/style/gi, "");
+function thumbnail(svg, extraCss = "") {
+  const css = `${kit.ISO_CSS}${inkKit.INK_CSS}${extraCss}`.replace(/<\/style/gi, "");
   return svg
     .replace(/<svg ([^>]*?)class="([^"]*)"/, '<svg $1class="$2 iso iso-ink" data-theme="light"')
     .replace(/(<svg[^>]*>)/, `$1<style>${css}</style>`)
@@ -125,7 +125,7 @@ for (const [i, m] of machines.entries()) {
     const dir = join(OUT, "m", m.slug);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "index.html"), html);
-    writeFileSync(join(dir, "figure.svg"), thumbnail(m.fig.svg));
+    writeFileSync(join(dir, "figure.svg"), thumbnail(m.fig.svg, m.fig.css || ""));
     console.log(`✓ ${m.slug.padEnd(22)} ${(html.length / 1024).toFixed(0).padStart(5)} KB  ${m.missions.length} missions`);
   } catch (error) {
     console.error(`✗ ${m.slug}: ${error.stack || error}`);
