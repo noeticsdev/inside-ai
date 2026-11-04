@@ -28,42 +28,57 @@ const freshPose = () => ({ pressX: HOME, pressZ: 0, count: 0, drawers: 0, hot: [
 function layout(tokens) {
   const S = D.STICK;
   const out = [];
-  const n = Math.min(tokens.length, S.max);
   let x = S.x0;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < tokens.length && i < S.max; i++) {
     const len = Math.min(Array.from(tokens[i]).length, 8);
-    const w = S.w0 + S.wk * (tokens[i] === " " ? 1 : len);
+    const w = S.w0 + S.wk * len;
+    // Leave room for the overflow block whenever more tokens remain.
+    const reserve = i < tokens.length - 1 ? S.moreWidth + S.gap : 0;
+    if (x + w + reserve > S.x1) break;
     out.push({ x, w, cx: x + w / 2 });
     x += w + S.gap;
   }
-  return { sorts: out, hidden: tokens.length - n };
+  return { sorts: out, hidden: tokens.length - out.length };
 }
 
 function sortSvg(tok, g, fused) {
   const S = D.STICK;
-  const label = tok === " " ? "␣" : (() => {
-    const chars = Array.from(tok);
-    return esc(chars.slice(0, 8).join("") + (chars.length > 8 ? "…" : ""));
-  })();
-  const paths = K.slabOf({ x: g.x, y: S.y0, w: g.w, d: S.d, r: 0.4 }, S.z0, S.h, D.P, 2);
-  const text = K.faceTextSvg(K.sideMatrix([g.cx, S.y0 + S.d + 0.06], S.z0 + 2.4, D.P, "left"), label, { size: 2.2, tone: "mid", anchor: "middle" });
-  return `<g data-sort>${K.solidSvg(paths, { tone: "hi", lit: Boolean(fused) })}${text}</g>`;
+  const chars = Array.from(tok);
+  const label = tok === " " ? "␣" : chars.slice(0, 8).join("") + (chars.length > 8 ? "…" : "");
+  const paths = K.slabOf({ x: g.x, y: S.y0, w: g.w, d: S.d, r: 0.35 }, S.z0, S.h, D.P, 2);
+  const text = K.faceTextSvg(K.sideMatrix([g.cx, S.y0 + S.d + 0.06], S.z0 + 2.3, D.P, "left"), label, { size: 4.1, tone: "mid", anchor: "middle" });
+  return `<g data-sort${fused ? ' data-fused=""' : ''}>${K.solidSvg(paths, { tone: "hi" })}${text}</g>`;
 }
 
-function renderRow(tokens, fusedIdx) {
+function renderRow(tokens, fusedIndices = []) {
   const S = D.STICK;
   const lay = layout(tokens);
+  const fused = new Set(fusedIndices);
   const cells = lay.sorts
-    .map((g, i) => ({ g, svg: sortSvg(tokens[i], g, i === fusedIdx), key: K.depthOf([g.cx, S.y0, S.z0], D.P) }))
+    .map((g, i) => ({ g, svg: sortSvg(tokens[i], g, fused.has(i)), key: K.depthOf([g.cx, S.y0, S.z0], D.P) }))
     .sort((a, b) => a.key - b.key);
   let html = cells.map((c) => c.svg).join("");
   if (lay.hidden > 0) {
     const x = lay.sorts.length ? lay.sorts[lay.sorts.length - 1].x + lay.sorts[lay.sorts.length - 1].w + S.gap : S.x0;
-    const w = 9;
-    const paths = K.slabOf({ x, y: S.y0, w, d: S.d, r: 0.4 }, S.z0, S.h, D.P, 2);
-    html += `<g data-sort>${K.solidSvg(paths, { tone: "lo" })}${K.faceTextSvg(K.sideMatrix([x + w / 2, S.y0 + S.d + 0.06], S.z0 + 2.4, D.P, "left"), "+" + lay.hidden, { size: 2.2, tone: "mid", anchor: "middle" })}</g>`;
+    const w = S.moreWidth;
+    const paths = K.slabOf({ x, y: S.y0, w, d: S.d, r: 0.35 }, S.z0, S.h, D.P, 2);
+    html += `<g data-sort data-overflow="">${K.solidSvg(paths, { tone: "hi" })}${K.faceTextSvg(K.sideMatrix([x + w / 2, S.y0 + S.d + 0.06], S.z0 + 2.6, D.P, "left"), "+" + lay.hidden + " more", { size: 2.8, tone: "mid", anchor: "middle" })}</g>`;
   }
   live("sortrow").innerHTML = html;
+}
+
+// Identify actual fusions, including repeated pairs and excluding old tokens
+// with the same spelling. Spaces never participate in a merge.
+function fusedIndices(previous, merge) {
+  const indices = [];
+  let outputIndex = 0;
+  for (let i = 0; i < previous.length; i++, outputIndex++) {
+    if (previous[i] === merge.a && previous[i + 1] === merge.b && previous[i] !== " " && previous[i + 1] !== " ") {
+      indices.push(outputIndex);
+      i++;
+    }
+  }
+  return indices;
 }
 
 function siteXOf(tokens, at) {
@@ -83,7 +98,7 @@ function beatsFor(sim) {
       b(0.4, { pressX: HOME }, ["sortrow"], (pose) => {
         pose.count = ev.tokenCount;
         pose.drawers = 0;
-        renderRow(ev.tokens, -1);
+        renderRow(ev.tokens);
         syncDrawers(0, -1);
       });
     } else if (ev.type === "merge") {
@@ -93,7 +108,7 @@ function beatsFor(sim) {
       b(0.4, {}, ["sortrow", `drawer${ev.merge.rank}`], (pose) => {
         pose.count = ev.tokenCount;
         pose.drawers = ev.merge.rank + 1;
-        renderRow(ev.tokens, ev.at);
+        renderRow(ev.tokens, fusedIndices(sim.events[ev.index - 1].tokens, ev.merge));
         syncDrawers(pose.drawers, ev.merge.rank);
       });
       b(0.3, { pressZ: 0 }, ["plunger"]);
@@ -132,7 +147,7 @@ function load(config, { autoplay = false } = {}) {
   Object.assign(state, { pose: freshPose(), bi: 0, bt: 0, shown: -1, done: false, stopAt: -1 });
   const first = state.sim.events[0];
   state.pose.count = first.tokenCount;
-  renderRow(first.tokens, -1);
+  renderRow(first.tokens);
   syncDrawers(0, -1);
   $("#ie-merges").value = String(state.config.merges);
   $("#ie-merges-val").value = String(state.config.merges);
@@ -240,10 +255,6 @@ function draw() {
     lastOrder = order;
   }
 
-  // carriage + plunger ride inside their (possibly exploded) press groups
-  live("carriage").setAttribute("transform", K.translateAlong(D.P, [pose.pressX, 0, 0]));
-  live("carriage2").setAttribute("transform", K.translateAlong(D.P, [pose.pressX, 0, 0]));
-  live("plunger").setAttribute("transform", K.translateAlong(D.P, [pose.pressX, 0, pose.pressZ]));
 
   // dial needle follows the live token count
   const [cx, cy, cz, max] = D.DIAL;
@@ -255,7 +266,7 @@ function draw() {
   if (pose.hotDrawer >= 0) hot.add(`drawer${pose.hotDrawer}`);
   for (const id of Array.from(hot)) if (meta[id]) hot.add(`tag-${meta[id].asm}`);
   const pills = D.LABELS.map((label) => {
-    const at = label.asm === "press" ? [pose.pressX, label.at[1], label.at[2]] : label.at;
+    const at = label.at;
     return Ink.pillSvg(K.iso(add(at, mul(D.EXPLODE[label.asm], state.explode.shares[label.asm].x)), D.P), label.dx, label.dy, D.CONCEPT[label.asm], pose.hot.some((id) => meta[id] && meta[id].asm === label.asm));
   }).join("");
   if (pills !== lastPills) svg.querySelector("[data-pills]").innerHTML = lastPills = pills;
