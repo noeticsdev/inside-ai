@@ -3,40 +3,11 @@
 // each step adds a real DeepStream element where it runs, and the Next button waits for the step's task.
 // Every number comes from model.mjs.
 import * as M from "./model.mjs";
-import { createIA, theme } from "../../platform/shell/sdk.js";
-import { mountPyCell } from "../../platform/shell/pycell.js";
+import { createGuide, h, s, fmt, r3, svgBox, T_, still, metricsRow, pyCell } from "../../platform/shell/guide-runtime.js";
 
-const L = window.__LESSON__;
-L.missionChecks = Object.fromEntries(M.MISSIONS.map((m) => [m.id, m.check]));
-L.words = { right: "You were right.", shows: "The build showed", later: "You will find out as you build.", skip: "Skip the prediction" };
-const T = theme();
-document.querySelector("[data-ia-theme]")?.addEventListener("click", () => T.toggle());
-const IA = createIA({ M: { MISSIONS: [] }, data: L });
-window.IA = IA;
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-// ---------- DOM helpers ----------
-const NS = "http://www.w3.org/2000/svg";
-function put(el, attrs) {
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "text") el.textContent = v;
-    else if (k === "html") el.innerHTML = v;
-    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  return el;
-}
-function add(el, kids) {
-  for (const k of kids.flat(Infinity)) if (k !== null && k !== undefined && k !== false) el.append(k.nodeType ? k : String(k));
-  return el;
-}
-const h = (tag, attrs, ...kids) => add(put(document.createElement(tag), attrs), kids);
-const s = (tag, attrs, ...kids) => add(put(document.createElementNS(NS, tag), attrs), kids);
-const fmt = (n) => Number(n).toLocaleString("en-US");
-const r3 = (v) => Math.round(v * 1000) / 1000;
-const svgBox = (w, hh, label) => s("svg", { viewBox: `0 0 ${w} ${hh}`, role: "img", "aria-label": label, style: `max-width:${w}px` });
-const T_ = (x, y, text, cls = "cu-t", anchor) => s("text", { x, y, class: cls, "text-anchor": anchor, text });
+let G = null; // the guide, set in init() before the first render
+const CHECK = Object.fromEntries(M.MISSIONS.map((m) => [m.id, m.check]));
+const solved = (id) => Boolean(G && G.solved(id));
 
 // ---------- facts used across steps ----------
 const IDR = M.framePackets(0);
@@ -52,7 +23,6 @@ const eventJson = (ms) => {
 };
 const MSG_BYTES = new TextEncoder().encode(JSON.stringify(M.eventMessage(FIRST))).length;
 const FU = IDR.packets.filter((p) => p.kind.startsWith("FU-A")).length;
-const solved = (id) => IA.isDone(id) || Boolean(state.revealed[id]);
 
 // =====================================================================
 // The hardware board (viewBox 1000 x 600)
@@ -105,7 +75,10 @@ function readoutRows() {
   ];
 }
 
-function board({ built, on = [], fresh = null, enter = false, meters = null, cameras = 1, hit = null }) {
+function board(ctx) {
+  const { built, on = [], fresh = null, enter = false, hit = null } = ctx;
+  const meters = ctx.step.meters ? ctx.step.meters() : null;
+  const cameras = ctx.step.cameras || 1;
   const svg = s("svg", { viewBox: "0 0 1000 600", role: "img", "aria-label": "A server: network card, CPU with system RAM, a PCIe x16 slot and a GPU with its NVDEC video engine, SMs and VRAM. Pipeline elements are tagged on the hardware they run on." });
   const grp = (id, ...kids) => {
     const g = s("g", { class: `hw-grp ${on.includes(id) ? "is-on" : ""}`, "data-hw": id }, kids);
@@ -252,19 +225,6 @@ function playToken(svg, step) {
   requestAnimationFrame(tick);
 }
 
-// small fine-line glyphs for the parts list
-function glyph(kind) {
-  const g = s("svg", { viewBox: "0 0 40 32", "aria-hidden": "true" });
-  const st = { fill: "none", stroke: "currentColor", "stroke-width": 1.2 };
-  if (kind === "cpu") g.append(s("rect", { ...st, x: 10, y: 6, width: 20, height: 20, rx: 2 }), s("rect", { ...st, x: 15, y: 11, width: 10, height: 10 }), ...[13, 20, 27].flatMap((p) => [s("line", { ...st, x1: p, y1: 2, x2: p, y2: 6 }), s("line", { ...st, x1: p, y1: 26, x2: p, y2: 30 })]));
-  else if (kind === "gpu") g.append(s("rect", { ...st, x: 3, y: 7, width: 34, height: 18, rx: 2 }), ...[0, 1, 2, 3].map((i) => s("rect", { ...st, x: 7 + i * 7, y: 11, width: 5, height: 5 })), s("line", { ...st, x1: 6, y1: 25, x2: 6, y2: 29 }), s("line", { ...st, x1: 34, y1: 25, x2: 34, y2: 29 }));
-  else if (kind === "nic") g.append(s("rect", { ...st, x: 4, y: 8, width: 32, height: 16, rx: 2 }), s("rect", { ...st, x: 8, y: 12, width: 8, height: 8 }), s("path", { ...st, d: "M20 16h12M28 12l4 4-4 4" }));
-  else if (kind === "cam") g.append(s("rect", { ...st, x: 12, y: 9, width: 24, height: 15, rx: 3 }), s("circle", { ...st, cx: 11, cy: 16.5, r: 6 }), s("line", { ...st, x1: 24, y1: 24, x2: 24, y2: 30 }));
-  else if (kind === "model") g.append(s("rect", { ...st, x: 6, y: 6, width: 28, height: 20, rx: 2 }), s("rect", { ...st, x: 11, y: 10, width: 9, height: 9 }), s("rect", { ...st, x: 19, y: 14, width: 10, height: 8 }));
-  else g.append(s("rect", { ...st, x: 6, y: 9, width: 28, height: 14, rx: 7 }), s("line", { ...st, x1: 12, y1: 16, x2: 28, y2: 16 }));
-  return g;
-}
-
 // =====================================================================
 // The street scene (1920 x 1080 world units), reused by the detector and tracker steps
 // =====================================================================
@@ -297,7 +257,6 @@ function boxEl(box, cls, label, labelCls) {
   }
   return g;
 }
-const metricsRow = (items) => h("div", { class: "metrics" }, items.map(([a, b, c]) => h("div", {}, h("span", { text: a }), h("strong", { class: c, text: String(b) }))));
 
 // =====================================================================
 // Close-up figures (one per board step)
@@ -453,26 +412,11 @@ function smFormula(load) {
   ].join("\n");
 }
 
-function pyCell(host, spec) {
-  try {
-    return mountPyCell(host, spec);
-  } catch (error) {
-    host.append(h("p", { class: "cu-cap", text: "The Python cell could not load here." }));
-    console.warn(error);
-    return null;
-  }
-}
-
 // =====================================================================
 // Steps
 // =====================================================================
 const scale = { batch: 8, interval: 0 };
 const nmsP = { preClusterThreshold: 0.25, nmsIouThreshold: 0.85, touched: false };
-const keepSettings = () => {
-  state.scale = { ...scale };
-  state.nms = { preClusterThreshold: nmsP.preClusterThreshold, nmsIouThreshold: nmsP.nmsIouThreshold };
-  saveState();
-};
 let trackK = 0;
 let trackF = 24;
 
@@ -510,6 +454,7 @@ const STEPS = [
     lead: "Add <code>rtspsrc</code>. It opens an RTSP session with cam-03, and the camera starts sending H.264 inside RTP packets over UDP. A packet carries at most 1,400 bytes, so one 120,000-byte key frame arrives as <b>88 packets</b>.",
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["nic", "cpu"],
     adds: [{ glyph: "nic", name: "rtspsrc", runs: "runs on the CPU · packets arrive through the NIC", conf: "location=rtsp://cam-03.local/stream1\nprotocols=udp\nlatency=200      # jitter buffer, ms" }],
     closeLabel: "CLOSE-UP · RTP PACKET",
@@ -520,7 +465,7 @@ const STEPS = [
       ui.number({
         prompt: `Every packet of a frame carries the same timestamp. Video RTP uses a 90 kHz clock, and the camera sends 30 frames per second. Frame 0 is stamped ${fmt(IDR.timestamp)}. What is frame 1 stamped?`,
         placeholder: "timestamp",
-        check: (v) => L.missionChecks.timestamp({ timestamp: v }),
+        check: (v) => CHECK.timestamp({ timestamp: v }),
         hint: (v, n) => (v === 1800033 || v === 1800034 ? "That adds milliseconds. The clock ticks 90,000 times a second, not 1,000." : v === 1800001 ? "That adds one frame. The timestamp counts clock ticks, not frames." : n > 1 ? "Ticks per frame = 90,000 / 30. Add that to frame 0's stamp." : "Not quite. How many 90 kHz ticks pass in one frame at 30 fps?"),
         answer: M.ANSWERS.frame1Timestamp,
       }),
@@ -534,6 +479,7 @@ const STEPS = [
     lead: `Add <code>rtph264depay</code> and <code>h264parse</code>. The depayloader joins the ${FU} FU-A fragments back into one NAL unit. The parser collects the NAL units with the same timestamp into an <b>access unit</b>: one compressed frame.`,
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["cpu"],
     adds: [
       { glyph: "cpu", name: "rtph264depay", runs: "runs on the CPU · RTP payload → H.264 NAL units" },
@@ -543,7 +489,23 @@ const STEPS = [
     closeHint: "what the key frame is made of",
     close: cuNal,
     mission: "nal-order",
-    task: (ui) => ui.order(),
+    task: (ui) =>
+      ui.order({
+        prompt: "The decoder must get this key frame's NAL units in the order it can read them. Tap them in that order. One of them does not belong in a key frame.",
+        items: [
+          [5, "IDR slice · 5"],
+          [8, "PPS · 8"],
+          [1, "non-IDR slice · 1"],
+          [7, "SPS · 7"],
+        ],
+        order: M.NAL_ORDER,
+        why: {
+          5: "Not yet: the slice header points to a PPS, so the decoder needs the PPS first.",
+          8: "Not yet: the PPS points to an SPS. The SPS holds the picture size, so it goes first.",
+          1: "A non-IDR slice belongs to a P frame, which needs an earlier frame. Frame 0 is a key frame, so it has none.",
+        },
+        check: (order) => CHECK["nal-order"]({ order }),
+      }),
     after: () => `SPS, then PPS, then the slice: each one refers to the one before it. The parser now sends this ${fmt(IDR.accessUnitBytes)}-byte access unit over PCIe to the GPU. It is still compressed.`,
   },
   {
@@ -554,6 +516,7 @@ const STEPS = [
     lead: "Add <code>nvv4l2decoder</code>. The compressed frame crosses PCIe once. <b>NVDEC</b>, a fixed-function engine on the GPU, separate from the SMs, decodes it into an NV12 surface in VRAM.",
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["pcie", "nvdec", "vram"],
     adds: [{ glyph: "gpu", name: "nvv4l2decoder", runs: "runs on NVDEC · writes NV12 into VRAM (NVMM)", conf: "cudadec-memtype=0   # decode into device memory" }],
     closeLabel: "CLOSE-UP · NV12 SURFACE",
@@ -577,7 +540,7 @@ const STEPS = [
       ui.number({
         prompt: "How many bytes does this decoded 1920 × 1080 frame take in VRAM? Read the layout in the close-up.",
         placeholder: "bytes",
-        check: (v) => L.missionChecks.bytes({ frame: v }),
+        check: (v) => CHECK.bytes({ frame: v }),
         hint: (v, n) => (v === 1920 * 1080 * 3 ? "That is RGB at 3 bytes per pixel. NV12 stores colour at a quarter of the resolution." : v === 1920 * 1080 ? "That is only the Y plane. Add the UV plane below it." : v === 1920 * 1080 * 2 ? "The UV plane is half the height of Y, not the same size." : n > 1 ? "Y = 1920 × 1080 × 1. UV = 1920 × 540 × 1. Add them." : "Not quite. Add the Y plane and the UV plane."),
         answer: M.ANSWERS.nv12Frame,
       }),
@@ -591,6 +554,7 @@ const STEPS = [
     lead: "Add <code>nvstreammux</code>. It takes one frame from each camera and forms a batch, so the detector runs once for 8 frames. It batches <b>pointers</b> to the NV12 surfaces; no pixels move.",
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["vram"],
     cameras: 8,
     adds: [{ glyph: "gpu", name: "nvstreammux", runs: "batches NVMM surfaces · one source_id per camera", conf: "batch-size=8\nwidth=1920\nheight=1080\nbatched-push-timeout=40000" }],
@@ -607,7 +571,7 @@ const STEPS = [
           ["seconds", "Waits up to 40 seconds, so it waits for cam-05", "The value is in microseconds: 40,000 µs = 40 ms."],
           ["drop", "Drops cam-05's stream from the pipeline", "It does not drop the stream. The late frame goes into a later batch."],
         ],
-        check: (id) => L.missionChecks.mux({ choice: id }),
+        check: (id) => CHECK.mux({ choice: id }),
       }),
     after: () => "At 40 ms the batch leaves with 7 frames and one empty slot. A partial batch keeps the other cameras on time. Set the timeout near one frame interval (33 ms at 30 fps) for live sources.",
   },
@@ -619,6 +583,7 @@ const STEPS = [
     lead: "Add <code>nvinfer</code>. Before the network runs, CUDA kernels on the <b>SMs</b> convert each NV12 frame to planar RGB, scale it from 1920 × 1080 to the model's 960 × 544, and multiply by 1/255.",
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["sm", "vram"],
     adds: [{ glyph: "gpu", name: "nvinfer", runs: "runs on the SMs · pre-process + TensorRT", conf: "net-scale-factor=0.00392156862745098\nmodel-color-format=0   # RGB\nnetwork-mode=2         # FP16\ninfer-dims=3;544;960\nbatch-size=8" }],
     closeLabel: "CLOSE-UP · INPUT TENSOR",
@@ -629,7 +594,7 @@ const STEPS = [
       ui.number({
         prompt: "How many bytes is this input tensor: 8 frames × 3 colour planes × 544 × 960, in FP16?",
         placeholder: "bytes",
-        check: (v) => L.missionChecks.tensor({ tensor: v }),
+        check: (v) => CHECK.tensor({ tensor: v }),
         hint: (v, n) => (v === 12533760 ? "That counts elements. FP16 takes 2 bytes per element." : v === 8 * 3 * 1080 * 1920 * 2 ? "That is at camera resolution. nvinfer scales to 960 × 544 first." : n > 1 ? "8 × 3 × 544 × 960 × 2." : "Not quite. Multiply all four dimensions, then by the bytes per element."),
         answer: M.ANSWERS.batchTensor,
       }),
@@ -643,11 +608,25 @@ const STEPS = [
     lead: `TensorRT runs the detector once on the batch. It fires several overlapping boxes per object: <b>${raw30.length} candidates for 7 objects</b> on frame 30. nvinfer drops boxes under <code>pre-cluster-threshold</code>, then NMS keeps the best of each overlapping group.`,
     minutes: 3,
     view: "bench",
-    on: ["sm"],
+    where: "GPU · SMs",
+    addsLabel: "You configure",
     adds: [{ glyph: "gpu", name: "nvinfer · [class-attrs-all]", runs: "clustering, on the SMs", conf: () => `pre-cluster-threshold=${nmsP.preClusterThreshold.toFixed(2)}\nnms-iou-threshold=${nmsP.nmsIouThreshold.toFixed(2)}\ncluster-mode=2   # NMS` }],
     bench: benchDetect,
     mission: "nms",
-    task: (ui) => ui.nms(),
+    task: (ui) =>
+      ui.sliders({
+        prompt: "Set both thresholds so frame 30 has exactly one box per object: no duplicates, no false positives, nothing missed. The frame on the left updates as you move them.",
+        sliders: ["preClusterThreshold", "nmsIouThreshold"].map((key) => ({
+          label: key === "preClusterThreshold" ? "pre-cluster-threshold" : "nms-iou-threshold",
+          min: 0.1,
+          max: 0.95,
+          step: 0.05,
+          format: (v) => v.toFixed(2),
+          get: () => nmsP[key],
+          set: (v) => (nmsP[key] = v),
+        })),
+        check: () => CHECK.nms({ preClusterThreshold: nmsP.preClusterThreshold, nmsIouThreshold: nmsP.nmsIouThreshold }),
+      }),
     after: () => "Exact. The working window is confidence 0.40 to 0.85 and NMS above 0.412 up to 0.75. Below 0.412, the two walkers side by side merge into one box: their boxes overlap at IoU 0.412.",
   },
   {
@@ -658,7 +637,7 @@ const STEPS = [
     lead: "Add <code>nvtracker</code>. With <code>interval=k</code>, nvinfer runs on 1 frame in k + 1 and the IOU tracker holds each box in between. A new detection joins a track only if it overlaps the held box by <b>IoU ≥ 0.3</b>.",
     minutes: 3,
     view: "bench",
-    on: ["sm"],
+    where: "GPU · SMs",
     adds: [{ glyph: "gpu", name: "nvtracker", runs: "IOU tracker · matches boxes across frames", conf: () => `ll-lib-file=libnvds_nvmultiobjecttracker.so\nll-config-file=config_tracker_IOU.yml\n# nvinfer: interval=${trackK}` }],
     bench: benchTrack,
     mission: "interval",
@@ -666,10 +645,10 @@ const STEPS = [
       ui.number({
         prompt: "A box w px wide that moves d px overlaps its held box by IoU = (w − d) / (w + d). The table on the left lists each object's width and speed. What is the largest interval with no ID switches?",
         placeholder: "0 to 4",
-        check: (v) => L.missionChecks.interval({ interval: v }),
+        check: (v) => CHECK.interval({ interval: v }),
         hint: (v) => (v > M.ANSWERS.maxSafeInterval ? `Interval ${v} breaks a track. Set it on the left and watch car-a.` : `Interval ${v} is safe, but you can skip more. Find the object that sets the limit.`),
         answer: M.ANSWERS.maxSafeInterval,
-        onTry: (v) => Number.isInteger(v) && v >= 0 && v <= 4 && ((trackK = v), renderStage()),
+        onTry: (v) => Number.isInteger(v) && v >= 0 && v <= 4 && ((trackK = v), G.rerender()),
       }),
     after: () => {
       const k = M.ANSWERS.maxSafeInterval;
@@ -684,11 +663,20 @@ const STEPS = [
     lead: "Add <code>nvdsanalytics</code>. Only the metadata (boxes and IDs) goes back to the CPU; the pixels stay on the GPU. On every frame it checks each track's centre against the line at <b>x = 1000</b>. Write that check.",
     minutes: 3,
     view: "bench",
-    on: ["cpu"],
+    where: "CPU",
     adds: [{ glyph: "cpu", name: "nvdsanalytics", runs: "runs on the CPU · reads metadata only", conf: "[line-crossing-stream-0]\nenable=1\nline-crossing-Entry=900;650;1100;650;1000;300;1000;1000\nclass-id=0" }],
     bench: benchCount,
     mission: "crossing",
-    task: (ui) => ui.code(),
+    task: (ui) =>
+      ui.code({
+        prompt: "Write crossed() in the cell on the left and press Run. The step is done when all 5 checks pass.",
+        fallback: [
+          ["prev < x <= cur → entry · cur < x <= prev → exit", true],
+          ["prev <= x < cur → entry · cur <= x < prev → exit", false, "This misses car-a: it goes 970 → 1000 and lands exactly on the line."],
+          ["abs(cur − x) < 5 → crossing", false, "A fast car can jump past the band between two frames, and a car parked near the line fires on every frame."],
+          ["cur >= x → entry", false, "This fires on every frame once the car is past the line, not once."],
+        ],
+      }),
     after: () => `Your rule finds ${T0.crossings.length} crossings in the clip: car-a at frame 25 (its centre lands exactly on x = 1000), car-b at 39 and the truck at 45. Landing on the line counts; staying put never does.`,
   },
   {
@@ -699,6 +687,7 @@ const STEPS = [
     lead: `Add <code>nvmsgconv</code> and <code>nvmsgbroker</code>. They turn a crossing into a JSON message and publish it to the <code>traffic-events</code> topic. The frame was 3.1 MB on the GPU; the message is <b>${MSG_BYTES} bytes</b>.`,
     minutes: 2,
     view: "board",
+    replay: true,
     on: ["cpu", "nic"],
     adds: [
       { glyph: "cpu", name: "nvmsgconv", runs: "runs on the CPU · metadata → JSON" },
@@ -712,7 +701,7 @@ const STEPS = [
       ui.number({
         prompt: `The stream started at 18:00:00.000. car-a crossed on frame ${FIRST.frame}, at 30 fps. What goes in the milliseconds of @timestamp?`,
         placeholder: "milliseconds",
-        check: (v) => L.missionChecks["event-time"]({ ms: v }),
+        check: (v) => CHECK["event-time"]({ ms: v }),
         hint: (v, n) => (v === FIRST.frame ? "That is the frame number. Turn it into time: frames / fps." : v === 830 || v === 834 ? "Close. 25 / 30 s = 0.8333… s. Round to whole milliseconds." : n > 1 ? "25 / 30 × 1000, rounded." : "Not quite. How long after the start is frame 25 at 30 fps?"),
         answer: M.ANSWERS.eventMs,
       }),
@@ -740,7 +729,7 @@ const STEPS = [
       ui.choice({
         prompt: "At 16 cameras, which part runs out first?",
         options: M.pipeLoad({}).resources.map((r) => [r.id, r.name, null]),
-        check: (id) => L.missionChecks.bottleneck({ choice: id }),
+        check: (id) => CHECK.bottleneck({ choice: id }),
         why: (id) => {
           const load = M.pipeLoad({ cameras: 16, batch: 8, interval: 0 });
           const mine = load.resources.find((x) => x.id === id);
@@ -763,6 +752,7 @@ const STEPS = [
     view: "board",
     meters: () => M.pipeLoad({ cameras: 16, batch: scale.batch, interval: scale.interval }),
     cameras: 16,
+    addsLabel: "You configure",
     adds: [{ glyph: "gpu", name: "nvstreammux + nvinfer", runs: "the two settings you can change", conf: () => `batch-size=${scale.batch}\ninterval=${scale.interval}` }],
     closeLabel: "CLOSE-UP · THE ARITHMETIC",
     closeHint: "updates as you change the settings",
@@ -771,7 +761,20 @@ const STEPS = [
       return h("div", {}, h("pre", { class: "cu-json", text: smFormula(load) }), h("p", { class: "cu-cap", text: load.verdict }));
     },
     mission: "keep-up",
-    task: (ui) => ui.keepUp(),
+    onReveal: () => Object.assign(scale, { batch: 16, interval: 0 }),
+    task: (ui) =>
+      ui.selects({
+        prompt: "16 cameras. Keep every meter under 100% and the interval at 3 or lower.",
+        selects: [
+          { label: "batch-size", options: [1, 2, 4, 8, 16, 32].map((v) => [v, `batch-size=${v}`]), get: () => scale.batch, set: (v) => (scale.batch = v), parse: Number },
+          { label: "interval", options: [0, 1, 2, 3, 4].map((v) => [v, `interval=${v}`]), get: () => scale.interval, set: (v) => (scale.interval = v), parse: Number },
+        ],
+        check: () => {
+          if (CHECK["keep-up"](scale)) return true;
+          if (scale.interval > M.ANSWERS.maxSafeInterval) return `Under budget, but interval=${scale.interval} breaks the tracker: you showed in step 7 that IDs switch above ${M.ANSWERS.maxSafeInterval}.`;
+          return M.pipeLoad({ cameras: 16, ...scale }).verdict;
+        },
+      }),
     after: () => {
       const sm = M.pipeLoad({ cameras: 16, batch: scale.batch, interval: scale.interval }).resources.find((x) => x.id === "sm");
       return `Batch ${scale.batch}, interval ${scale.interval}: the SMs are at <b>${sm.load}%</b> and the tracker keeps every ID. One more thing: at 32 cameras NVDEC hits 106.7% whatever the interval, because every frame still has to be decoded.`;
@@ -842,7 +845,6 @@ function benchDetect(host) {
   });
 }
 
-let playTimer = 0;
 function benchTrack(host) {
   const run = M.track(trackK);
   const k = trackK;
@@ -859,24 +861,14 @@ function benchTrack(host) {
   const counted = run.crossings.filter((c) => c.frame <= f).length;
   const truth = M.trueCrossings().filter((c) => c.frame <= f).length;
   const sel = h("select", { class: "gd-select", "aria-label": "interval" }, [0, 1, 2, 3, 4].map((v) => h("option", { value: v, text: `interval=${v}`, selected: v === k })));
-  sel.onchange = () => ((trackK = Number(sel.value)), renderStage(), IA.event("control", { name: "interval", value: sel.value }));
+  sel.onchange = () => ((trackK = Number(sel.value)), G.rerender(), G.IA.event("control", { name: "interval", value: sel.value }));
   const scrub = h("input", { type: "range", min: 0, max: M.SCENE.frames - 1, step: 1, value: f, "aria-label": "frame" });
-  scrub.oninput = () => ((trackF = Number(scrub.value)), renderStage());
-  const play = h("button", { class: "gd-tool", type: "button", text: playTimer ? "Pause" : "Play" });
+  scrub.oninput = () => ((trackF = Number(scrub.value)), G.rerender());
+  const play = h("button", { class: "gd-tool", type: "button", text: G.playing() ? "Pause" : "Play" });
   play.onclick = () => {
-    if (playTimer) {
-      clearTimeout(playTimer);
-      playTimer = 0;
-      return renderStage();
-    }
+    if (G.playing()) return G.stop(), G.rerender();
     if (trackF >= M.SCENE.frames - 1) trackF = 0;
-    const tick = () => {
-      trackF += 1;
-      if (trackF >= M.SCENE.frames - 1) playTimer = 0;
-      else playTimer = setTimeout(tick, still ? 0 : 1000 / 15);
-      renderStage();
-    };
-    playTimer = setTimeout(tick, 0);
+    G.play(() => (trackF += 1) < M.SCENE.frames - 1, 1000 / 15);
   };
   const gap = k + 1;
   const rows = M.OBJECTS.map((o) => {
@@ -934,7 +926,7 @@ function benchCount(host) {
       "check('a parked car never crosses', crossed(1620, 1620, 1000) is None, 'no movement: no event')",
     ].join("\n"),
     solution: "def crossed(prev_cx, cur_cx, line_x):\n    if prev_cx < line_x <= cur_cx:\n        return 'entry'\n    if cur_cx < line_x <= prev_cx:\n        return 'exit'\n    return None\n",
-    onPass: () => passStep("crossing", { passed: true }),
+    onPass: () => G.pass("crossing", { passed: true }),
   });
 }
 
@@ -943,303 +935,9 @@ function codeToggle(host, spec) {
   const btn = h("button", { class: "gd-tool", type: "button", text: "Code it in Python" });
   btn.onclick = () => {
     btn.remove();
-    pyCell(box, { ...spec, onPass: () => IA.event("control", { name: "pycell", value: `${spec.id}:pass` }) });
+    pyCell(box, { ...spec, onPass: () => G.IA.event("control", { name: "pycell", value: `${spec.id}:pass` }) });
   };
   host.append(h("div", {}, btn), box);
-}
-
-// =====================================================================
-// State, navigation and rendering
-// =====================================================================
-const KEY = "ia:guide:deepstream";
-const state = (() => {
-  try {
-    return { step: 0, revealed: {}, max: 0, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
-  } catch {
-    return { step: 0, revealed: {}, max: 0 };
-  }
-})();
-if (state.scale) Object.assign(scale, state.scale);
-if (state.nms) Object.assign(nmsP, state.nms);
-const saveState = () => {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {}
-};
-const stage = document.querySelector("[data-gd-stage]");
-const panel = document.querySelector("[data-gd-panel]");
-const nextBtn = document.querySelector("[data-gd-next]");
-const nextLabel = document.querySelector("[data-gd-next-label]");
-const backBtn = document.querySelector("[data-gd-back]");
-const phases = document.querySelector("[data-gd-phases]");
-const parking = document.querySelector("[data-gd-parking]");
-nextLabel.before(h("span", { class: "gd-tick", "aria-hidden": "true", text: "✓" }));
-let kitHw = null;
-
-const stepReady = (st) => !st.mission || solved(st.mission);
-const builtAt = (i) => Math.min(9, i);
-
-function renderPhases() {
-  const cur = STEPS[state.step];
-  const firstOf = (p) => STEPS.findIndex((x) => x.phase === p);
-  const items = [
-    ["kit", "Kit"],
-    ["build", "Build", cur.phase === "build" ? `${BUILD.indexOf(cur) + 1}/${BUILD.length}` : ""],
-    ["scale", "Scale"],
-    ["done", "Done"],
-  ];
-  phases.replaceChildren(
-    ...items.map(([p, label, small]) => {
-      const i = firstOf(p);
-      const b = h("button", { type: "button", disabled: i > state.max, "aria-current": cur.phase === p ? "step" : null }, label, small ? h("small", { text: small }) : null);
-      if (cur.phase === p && p === "build") b.append(h("i", { style: `width:calc(${(BUILD.indexOf(cur) + 1) / BUILD.length} * (100% - 20px))` }));
-      b.onclick = () => go(i);
-      return b;
-    }),
-  );
-}
-
-function renderStage({ animate = false } = {}) {
-  const i = state.step;
-  const st = STEPS[i];
-  stage.replaceChildren();
-  if (st.phase === "build" || st.phase === "scale") stage.append(h("div", { class: "gd-num", text: String(i) }));
-  const onHw = st.id === "kit" ? (kitHw ? [kitHw] : []) : st.on || [];
-  const where = st.on ? st.on.map((x) => HW[x].label).join(" · ") : "";
-  if (st.view === "bench") {
-    if (where) stage.append(h("div", { class: "gd-where" }, "runs on", h("b", { text: where })));
-    const bench = h("div", { class: "gd-bench" });
-    stage.append(bench);
-    st.bench(bench);
-    return;
-  }
-  const built = st.phase === "done" || st.phase === "scale" ? 9 : builtAt(i);
-  const svg = board({ built, on: onHw, fresh: st.phase === "build" ? i : null, enter: animate, meters: st.meters ? st.meters() : null, cameras: st.cameras || 1, hit: st.id === "kit" ? (id) => ((kitHw = id), renderStage(), renderPanel()) : null });
-  stage.append(h("div", { class: "gd-board" }, svg));
-  if (st.phase === "build" && ROUTES[i]) {
-    if (animate) requestAnimationFrame(() => playToken(svg, i));
-    else playToken(svg, i);
-  }
-  if (st.close) {
-    const tools = h("div", { class: "gd-tools" });
-    const body = h("div", { class: "gd-close-body" }, st.close());
-    const card = h("div", { class: "gd-close" }, h("div", { class: "gd-close-head" }, h("b", { text: st.closeLabel }), h("span", { text: st.closeHint }), tools), body);
-    if (st.code) {
-      const codeBox = h("div", { class: "gd-close-code" });
-      tools.append(h("button", { class: "gd-tool", type: "button", text: "Code it in Python", onclick: (e) => (e.currentTarget.remove(), pyCell(codeBox, { ...st.code, onPass: () => IA.event("control", { name: "pycell", value: `${st.code.id}:pass` }) }), codeBox.scrollIntoView({ block: "nearest" })) }));
-      card.append(codeBox);
-    }
-    if (ROUTES[i] && st.phase === "build") tools.append(h("button", { class: "gd-tool", type: "button", text: "Replay", onclick: () => renderStage({ animate: true }) }));
-    stage.append(card);
-  }
-  fitBoard();
-}
-
-// give the board whatever height the close-up leaves, but never below a readable size
-function fitBoard() {
-  const svg = stage.querySelector(".gd-board svg");
-  if (!svg || matchMedia("(max-width: 900px)").matches) return;
-  const card = stage.querySelector(".gd-close");
-  const room = stage.clientHeight - (card ? card.offsetHeight + 26 : 0) - 14;
-  svg.style.maxHeight = `${Math.max(400, room)}px`;
-}
-addEventListener("resize", () => fitBoard());
-
-// task widgets
-function taskUi(st, box, fb, onSolved) {
-  let tries = 0;
-  const fail = (msg) => {
-    tries += 1;
-    fb.dataset.ok = "false";
-    fb.textContent = msg;
-    if (tries >= 2 && !box.querySelector(".gd-reveal") && st.mission) {
-      const rv = h("button", { class: "gd-reveal", type: "button", text: "Show me the answer" });
-      rv.onclick = () => {
-        state.revealed[st.mission] = true;
-        if (st.mission === "keep-up") Object.assign(scale, { batch: 16, interval: 0 }), keepSettings();
-        saveState();
-        IA.event("control", { name: "reveal", value: st.mission });
-        onSolved(true);
-      };
-      box.append(rv);
-    }
-  };
-  const ok = (detail) => passStep(st.mission, detail);
-  return {
-    tries: () => tries,
-    number({ prompt, placeholder, check, hint, onTry }) {
-      const inp = h("input", { type: "number", inputmode: "numeric", placeholder, "aria-label": placeholder });
-      const btn = h("button", { class: "ia-btn ia-primary", type: "button", text: "Check" });
-      const go_ = () => {
-        const v = Number(String(inp.value).replace(/[, _]/g, ""));
-        if (!inp.value.trim()) return;
-        onTry?.(v);
-        IA.event("answer", { index: -1, stage: "mission", answer: v, correct: check(v) });
-        if (check(v)) ok({ value: v });
-        else fail(hint(v, tries + 1));
-      };
-      btn.onclick = go_;
-      inp.onkeydown = (e) => e.key === "Enter" && go_();
-      return [h("p", { text: prompt }), h("div", { class: "gd-row" }, inp, btn)];
-    },
-    choice({ prompt, options, check, why }) {
-      const wrap = h("div", { class: "gd-choices" });
-      for (const [id, label, wrong] of options) {
-        const b = h("button", { class: "gd-choice", type: "button", text: label });
-        b.onclick = () => {
-          const good = check(id);
-          IA.event("answer", { index: -1, stage: "mission", answer: id, correct: good });
-          b.dataset.state = good ? "yes" : "no";
-          if (good) ok({ choice: id });
-          else fail(wrong || (why ? why(id) : "Not this one."));
-        };
-        wrap.append(b);
-      }
-      return [h("p", { text: prompt }), wrap];
-    },
-    order() {
-      const units = [
-        [5, "IDR slice · 5"],
-        [8, "PPS · 8"],
-        [1, "non-IDR slice · 1"],
-        [7, "SPS · 7"],
-      ];
-      const why = {
-        5: "Not yet: the slice header points to a PPS, so the decoder needs the PPS first.",
-        8: "Not yet: the PPS points to an SPS. The SPS holds the picture size, so it goes first.",
-        1: "A non-IDR slice belongs to a P frame, which needs an earlier frame. Frame 0 is a key frame, so it has none.",
-      };
-      const seq = h("div", { class: "gd-seq" });
-      const picked = [];
-      const wrap = h("div", { class: "gd-chips" });
-      for (const [type, label] of units) {
-        const b = h("button", { class: "gd-chip", type: "button", text: label });
-        b.onclick = () => {
-          const want = M.NAL_ORDER[picked.length];
-          if (type === want) {
-            picked.push(type);
-            b.disabled = true;
-            seq.append(h("span", { text: label }));
-            fb.textContent = "";
-            if (picked.length === M.NAL_ORDER.length && L.missionChecks["nal-order"]({ order: picked })) ok({ order: picked });
-          } else {
-            b.dataset.state = "no";
-            setTimeout(() => delete b.dataset.state, 400);
-            IA.event("answer", { index: -1, stage: "mission", answer: type, correct: false });
-            fail(why[type] || "Not that one yet.");
-          }
-        };
-        wrap.append(b);
-      }
-      return [h("p", { text: "The decoder must get this key frame's NAL units in the order it can read them. Tap them in that order. One of them does not belong in a key frame." }), wrap, seq];
-    },
-    nms() {
-      const mk = (key, label) => {
-        const out = h("output", { text: nmsP[key].toFixed(2) });
-        const r = h("input", { type: "range", min: 0.1, max: 0.95, step: 0.05, value: nmsP[key], "aria-label": label });
-        r.oninput = () => {
-          nmsP[key] = Number(r.value);
-          nmsP.touched = true;
-          keepSettings();
-          out.textContent = nmsP[key].toFixed(2);
-          renderStage();
-          renderParts();
-          IA.event("control", { name: label, value: r.value });
-          const p = { preClusterThreshold: nmsP.preClusterThreshold, nmsIouThreshold: nmsP.nmsIouThreshold };
-          if (L.missionChecks.nms(p)) ok(p);
-        };
-        return h("div", { class: "gd-slider" }, h("label", {}, label, out), r);
-      };
-      return [h("p", { text: "Set both thresholds so frame 30 has exactly one box per object: no duplicates, no false positives, nothing missed. The frame on the left updates as you move them." }), mk("preClusterThreshold", "pre-cluster-threshold"), mk("nmsIouThreshold", "nms-iou-threshold")];
-    },
-    code() {
-      const details = h("details", { class: "gd-fallback" }, h("summary", { text: "Python won't load here? Pick the rule instead" }));
-      const opts = [
-        ["a", "prev < x <= cur → entry · cur < x <= prev → exit", true],
-        ["b", "prev <= x < cur → entry · cur <= x < prev → exit", false],
-        ["c", "abs(cur − x) < 5 → crossing", false],
-        ["d", "cur >= x → entry", false],
-      ];
-      const why = { b: "This misses car-a: it goes 970 → 1000 and lands exactly on the line.", c: "A fast car can jump past the band between two frames, and a car parked near the line fires on every frame.", d: "This fires on every frame once the car is past the line, not once." };
-      const wrap = h("div", { class: "gd-choices" });
-      for (const [id, label, good] of opts) {
-        const b = h("button", { class: "gd-choice", type: "button", html: `<code>${label}</code>` });
-        b.onclick = () => {
-          b.dataset.state = good ? "yes" : "no";
-          if (good) ok({ passed: true });
-          else fail(why[id]);
-        };
-        wrap.append(b);
-      }
-      details.append(wrap);
-      return [h("p", { text: "Write crossed() in the cell on the left and press Run. The step is done when all 5 checks pass." }), details];
-    },
-    keepUp() {
-      const bSel = h("select", { class: "gd-select", "aria-label": "batch-size" }, [1, 2, 4, 8, 16, 32].map((v) => h("option", { value: v, text: `batch-size=${v}`, selected: v === scale.batch })));
-      const iSel = h("select", { class: "gd-select", "aria-label": "interval" }, [0, 1, 2, 3, 4].map((v) => h("option", { value: v, text: `interval=${v}`, selected: v === scale.interval })));
-      const onChange = () => {
-        scale.batch = Number(bSel.value);
-        scale.interval = Number(iSel.value);
-        keepSettings();
-        IA.event("control", { name: "keep-up", value: `${scale.batch}/${scale.interval}` });
-        renderStage();
-        renderParts();
-        const load = M.pipeLoad({ cameras: 16, ...scale });
-        if (L.missionChecks["keep-up"](scale)) ok({ ...scale });
-        else if (scale.interval > M.ANSWERS.maxSafeInterval) fail(`Under budget, but interval=${scale.interval} breaks the tracker: you showed in step 7 that IDs switch above ${M.ANSWERS.maxSafeInterval}.`);
-        else {
-          fb.dataset.ok = "false";
-          fb.textContent = load.verdict;
-        }
-      };
-      bSel.onchange = onChange;
-      iSel.onchange = onChange;
-      return [h("p", { text: "16 cameras. Keep every meter under 100% and the interval at 3 or lower." }), h("div", { class: "gd-row" }, bSel, iSel)];
-    },
-  };
-}
-
-let partsHost = null;
-function renderParts() {
-  const st = STEPS[state.step];
-  if (!partsHost) return;
-  const rows = [];
-  if (st.parts) {
-    for (const p of st.parts()) {
-      if (p.title) {
-        rows.push(h("h3", { class: "gd-h" }, p.title, h("span", { text: String(p.n) })));
-        continue;
-      }
-      const row = h("div", { class: `gd-part ${p.hw && p.hw === kitHw ? "is-on" : ""}` }, glyph(p.glyph), h("div", {}, h("div", { class: "gd-part-name", text: p.name }), h("div", { class: "gd-part-runs", text: p.runs })));
-      if (p.hw) {
-        row.style.cursor = "pointer";
-        row.onclick = () => ((kitHw = p.hw), renderStage(), renderParts());
-      }
-      rows.push(row);
-    }
-    // group rows under their titles
-    const out = [];
-    let list = null;
-    for (const r of rows) {
-      if (r.tagName === "H3") {
-        out.push(r);
-        list = h("div", { class: "gd-parts" });
-        out.push(list);
-      } else list.append(r);
-    }
-    partsHost.replaceChildren(...out);
-    return;
-  }
-  if (!st.adds) return partsHost.replaceChildren();
-  const label = st.id === "detect" || st.id === "keepup" ? "You configure" : "You add";
-  partsHost.replaceChildren(
-    h("h3", { class: "gd-h" }, label, h("span", { text: String(st.adds.length) })),
-    h(
-      "div",
-      { class: "gd-parts" },
-      st.adds.map((a) => h("div", { class: "gd-part" }, glyph(a.glyph), h("div", {}, h("div", { class: "gd-part-name", text: a.name }), h("div", { class: "gd-part-runs", text: a.runs })), a.conf ? h("pre", { text: typeof a.conf === "function" ? a.conf() : a.conf }) : null)),
-    ),
-  );
 }
 
 function configText() {
@@ -1295,132 +993,29 @@ nms-iou-threshold=${Math.max(0.45, Math.min(0.75, nmsP.nmsIouThreshold)).toFixed
 `;
 }
 
-function renderPanel() {
-  const i = state.step;
-  const st = STEPS[i];
-  const total = STEPS.length - 1;
-  const left = STEPS.slice(i).reduce((a, x) => a + x.minutes, 0);
-  const kicker = st.phase === "build" || st.phase === "scale" ? `Step ${i} of ${total - 1} · ${st.kicker}` : st.kicker;
-  panel.replaceChildren(h("div", { class: "gd-meta" }, h("span", { class: "gd-kicker", text: kicker }), left ? h("span", { class: "gd-left", text: `${left} min left` }) : null), h("h2", { class: "gd-title", text: st.title }), h("p", { class: "gd-lead", html: st.lead }));
-  partsHost = h("div");
-  panel.append(partsHost);
-  renderParts();
-
-  if (st.task === "predict") {
-    const pred = parking.querySelector("[data-ia-predict]") || document.querySelector("[data-ia-predict]");
-    if (pred) {
-      pred.hidden = false;
-      panel.append(pred);
-    }
-  } else if (st.task === "done") {
-    if (!M.keepsUp(scale)) Object.assign(scale, { batch: 16, interval: 0 });
-    const sm = M.pipeLoad({ cameras: 16, ...scale }).resources.find((x) => x.id === "sm");
-    panel.append(
-      h("div", { class: "gd-stats" }, h("div", {}, h("span", { text: "cameras" }), h("strong", { text: "16" })), h("div", {}, h("span", { text: "SM load" }), h("strong", { text: `${sm.load}%` })), h("div", {}, h("span", { text: "elements" }), h("strong", { text: "9" }))),
-    );
-    const copy = h("button", { class: "gd-tool", type: "button", text: "Copy" });
-    copy.onclick = () => navigator.clipboard?.writeText(configText()).then(() => (copy.textContent = "Copied"));
-    panel.append(h("h3", { class: "gd-h gd-h-row" }, "Your config", copy), h("div", { class: "gd-config" }, h("pre", { text: configText() })));
-    const check = parking.querySelector("[data-gd-check]") || document.querySelector("[data-gd-check]");
-    if (check) panel.append(check);
-  } else if (typeof st.task === "function") {
-    const box = h("div", { class: "gd-task" });
-    const fb = h("div", { class: "gd-fb", "aria-live": "polite" });
-    const tag = h("span", { class: "gd-task-tag" });
-    const afterBox = h("div");
-    const showSolved = () => {
-      box.dataset.done = "true";
-      tag.textContent = state.revealed[st.mission] && !IA.isDone(st.mission) ? "✓ Answer shown" : "✓ Solved";
-      fb.textContent = "";
-      box.querySelector(".gd-reveal")?.remove();
-      afterBox.replaceChildren(h("div", { class: "gd-after" }, h("h4", { text: "What just happened" }), h("div", { html: st.after() })));
-      renderPanelNextCard();
-    };
-    const ui = taskUi(st, box, fb, () => {
-      renderStage();
-      showSolved();
-    });
-    currentSolved = showSolved;
-    tag.textContent = "Your move";
-    box.append(tag, ...[].concat(st.task(ui)), fb);
-    panel.append(box, afterBox);
-    if (solved(st.mission)) showSolved();
-  }
-  const nx = STEPS[i + 1];
-  if (nx) {
-    const card = h("button", { class: "gd-next-card", type: "button", disabled: !stepReady(st) }, h("b", { text: nx.phase === "done" ? "✓" : String(i + 1) }), h("span", { text: nx.title }), h("span", { "aria-hidden": "true", text: "→" }));
-    card.onclick = () => stepReady(st) && go(i + 1);
-    panel.append(h("h3", { class: "gd-h", text: "Up next" }), card);
-  }
-  panel.scrollTop = 0;
-}
-
-let currentSolved = null;
-function passStep(mission, detail) {
-  if (!mission) return;
-  const fresh = IA.complete(mission, { quiet: true });
-  if (fresh) IA.event("control", { name: "step-solved", value: mission, detail });
-  renderStage();
-  if (STEPS[state.step].mission === mission) currentSolved?.();
-  renderPanelNextCard();
-}
-function renderPanelNextCard() {
-  const card = panel.querySelector(".gd-next-card");
-  if (card) card.disabled = !stepReady(STEPS[state.step]);
-  syncNext();
-}
-
-function syncNext() {
-  const st = STEPS[state.step];
-  const ready = stepReady(st);
-  nextBtn.dataset.ready = String(ready);
-  nextBtn.setAttribute("aria-disabled", String(!ready));
-  backBtn.disabled = state.step === 0;
-  if (st.phase === "done") {
-    nextLabel.textContent = "Take the checkpoint";
-    return;
-  }
-  nextLabel.textContent = !ready ? "Solve the task to continue" : st.nextLabel || (STEPS[state.step + 1].phase === "done" ? "Done, finish up" : "Done, next step");
-}
-
-function go(i, { animate = true } = {}) {
-  clearTimeout(playTimer);
-  playTimer = 0;
-  state.step = Math.max(0, Math.min(STEPS.length - 1, i));
-  state.max = Math.max(state.max, state.step);
-  saveState();
-  IA.event("control", { name: "step", value: STEPS[state.step].id });
-  if (STEPS[state.step].phase === "done") IA.event("control", { name: "guide-finished", value: true });
-  currentSolved = null;
-  // park the reusable nodes before the panel is cleared
-  for (const sel of ["[data-ia-predict]", "[data-gd-check]"]) {
-    const n = document.querySelector(sel);
-    if (n && !parking.contains(n)) parking.append(n);
-  }
-  renderPhases();
-  renderPanel();
-  renderStage({ animate });
-  syncNext();
-  stage.scrollTop = 0;
-  if (matchMedia("(max-width: 900px)").matches) scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
-}
-
-nextBtn.addEventListener("click", () => {
-  if (STEPS[state.step].phase === "done") return document.querySelector("[data-ia-check-open]")?.click();
-  if (!stepReady(STEPS[state.step])) {
-    panel.querySelector(".gd-task")?.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
-    panel.querySelector(".gd-task input, .gd-task button, .gd-task select")?.focus({ preventScroll: true });
-    return;
-  }
-  go(state.step + 1);
+// =====================================================================
+// The guide
+// =====================================================================
+createGuide({
+  M,
+  steps: STEPS,
+  board,
+  onBoard: (svg, ctx) => ctx.step.phase === "build" && ROUTES[ctx.fresh] && playToken(svg, ctx.fresh),
+  init(g) {
+    G = g;
+    if (g.settings.scale) Object.assign(scale, g.settings.scale);
+    if (g.settings.nms) Object.assign(nmsP, g.settings.nms);
+    g.settings.scale = scale;
+    g.settings.nms = nmsP;
+  },
+  done: {
+    before: () => !M.keepsUp(scale) && Object.assign(scale, { batch: 16, interval: 0 }),
+    stats: () => [
+      ["cameras", "16"],
+      ["SM load", `${M.pipeLoad({ cameras: 16, ...scale }).resources.find((x) => x.id === "sm").load}%`],
+      ["elements", "9"],
+    ],
+    artifactTitle: "Your config",
+    artifact: () => configText(),
+  },
 });
-backBtn.addEventListener("click", () => go(state.step - 1));
-addEventListener("keydown", (e) => {
-  if (e.target.closest("input, textarea, select")) return;
-  if (e.key === "ArrowRight" && stepReady(STEPS[state.step])) go(state.step + 1);
-  if (e.key === "ArrowLeft") go(state.step - 1);
-});
-
-const fromUrl = /[?&]step=(\d+)/.exec(location.search);
-go(fromUrl ? Number(fromUrl[1]) : state.step, { animate: true });
-window.__lesson = { ready: true, M, go, state, steps: STEPS.map((x) => x.id) };

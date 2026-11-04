@@ -38,7 +38,84 @@ dist/                    Build output. Never committed.
 - Dependencies: `hono`, `@libsql/client`. Nothing else without CTO approval. Machines use no runtime dependencies: plain ESM and SVG.
 - Plain JavaScript ESM (`.mjs`) for machines. TypeScript is fine in `server/`.
 
-## Machine contract — `machines/<slug>/`
+## Guided-build lessons: `lessons/<slug>/` (the current format)
+
+The isometric machines below were rejected as gimmicks: they had metaphor machines, "step" buttons that only highlighted stations, and missions that were just clicking. Every lesson is now a **guided build**, like an IKEA assembly guide (usebygga.com is the reference). The reader assembles the real system one part per screen, and every screen asks them to work something out. `lessons/deepstream/` is the reference implementation: read all of it before you write a line.
+
+**Page.** `content.mjs` sets `layout: "guide"`, and the build uses `platform/shell/guide.mjs`. The page has a stage on the left and a panel on the right. The panel has a kicker, a verb title, 2 or 3 sentences of lead, a "You add" parts list with real config or code lines, one task in "Your move", "What just happened" after the task is solved, and "Up next". The footer holds Back and Next. **Next is locked until the step's task is solved.** After 2 wrong tries the reader can choose "Show me the answer".
+
+**Runtime.** `page.js` calls `createGuide({ M, steps, board, onBoard?, init?, done })` from `platform/shell/guide-runtime.js`. The runtime owns navigation, gating, persistence, the task widgets, the footer, predict and the checkpoint. Do not copy it, and do not edit it. If you need a change, write it in your report. Helpers are exported from the runtime: `h`, `s`, `T_`, `svgBox`, `fmt`, `r3`, `glyph`, `metricsRow`, `pyCell`, `still`.
+
+**Step fields** (see the STEPS array in `lessons/deepstream/page.js`):
+
+- `id`, `phase`: `kit` comes first, then `build` steps, then optional `scale` steps, then exactly one `done`.
+- `kicker`, `title` (an imperative verb), `lead` (HTML), `minutes`.
+- `view: "board" | "bench"`, `on` (the board part ids to light).
+- `parts(g)` on the kit step, as rows of `{ title, n }` or `{ glyph, name, runs, hw }`.
+- `adds` (an array or `(g) => array` of `{ glyph, name, runs, conf }`) and `addsLabel`.
+- `close(g)`, `closeLabel`, `closeHint`: the close-up under the board, showing the real data at this point.
+- `code`: an optional pycell spec, shown as "Code it in Python".
+- `bench(host, g)` for steps that need the whole stage.
+- `mission`, the id of an entry in `M.MISSIONS`.
+- `task(ui, g)`, `after(g)` (HTML), `onReveal(g)`, `replay`, `nextLabel`, `where`.
+
+**Task widgets** on `ui`:
+
+- `number({ prompt, placeholder, check, hint(v, tries), onTry, unit })`
+- `choice({ prompt, options: [[id, label, whyWrong]], check, why })`
+- `order({ prompt, items: [[id, label]], order, why, check })`
+- `sliders({ prompt, sliders: [{ label, min, max, step, get, set, format }], check })`
+- `selects({ prompt, selects: [{ label, options: [[value, label]], get, set, parse }], check })`
+- `code({ prompt, fallback: [[label, good, whyWrong]] })`
+
+For `sliders` and `selects`, `check()` returns `true` when the task is solved, or a string that says what is still wrong. A Python step mounts its cell on the bench with `pyCell(host, { ..., onPass: () => g.pass(missionId) })`.
+
+**`g`** (the guide) provides:
+
+- `g.solved(id)` and `g.pass(id)`
+- `g.rerender({ animate })` and `g.refreshParts()`
+- `g.settings`, a persisted object (keep reader choices here), and `g.saveSettings()`
+- `g.play(fn, ms)`, `g.stop()` and `g.playing()`, the one shared timer for play buttons
+- `g.IA`, for events
+
+**Board.** `board(ctx)` returns an SVG of the real thing being built (hardware, a data structure, matrices, a pipeline), with crisp 1px lines, no wobble filter, and `viewBox` 1000 × 600 or close to it. `ctx` holds:
+
+- `built`: the number of build steps done so far, so you draw only the parts added so far
+- `fresh`: the 1-based build index of the part being added, which you draw in accent
+- `on`: the part ids to light
+- `enter`: true when the step was just entered
+- `hit`: on the kit step, a tap handler for parts
+- `step`, `solved`, `settings`
+
+A readout panel on the board should fill in real values ("?" until the step is solved). Use the CSS classes in `platform/shell/guide.css` and `lesson.css` (`hw-*`, `tag`, `route`, `token`, `cu-*`, `ro-*`, `meter*`, `fg`, `dt`, `metrics`, `formula`). Put lesson-only CSS in `lessons/<slug>/page.css`. Board text must stay readable: 13 to 16 units, mono.
+
+**Pedagogy rules.**
+
+1. Every build step adds one real component, with real names and real config or code (the API, the file or the parameter a practitioner would type).
+2. Every step has one task that needs reasoning: a computation, a prediction, an ordering, or a tuning with a checkable target. Never "click next" or "press play". Every task has hints for the 2 or 3 most common wrong answers, and the hint text says why the answer is wrong.
+3. Every number comes from `model.mjs` (pure, deterministic, no DOM) and is pinned in `model.test.mjs`. The answers and the checks live in `M.ANSWERS` and `M.MISSIONS`.
+4. Exactly one step needs a Python cell that the reader writes and runs (Pyodide, with 4 to 6 checks), with a `fallback` choice. Other steps can offer an optional `code`.
+5. The finish screen (`done` in `createGuide`) hands back an artifact built from the reader's own choices (a config, a schema, a merges file) plus 3 stats.
+6. The copy is plain technical English. Leads are 2 to 3 sentences. "What just happened" shows the worked arithmetic. Say "simulation" wherever a number is a fixed example value.
+
+**Files.**
+
+- `content.mjs`: slug, title, `short`, `subtitle`, `hook`, `layout: "guide"`, level, minutes, order, track, bigIdea, objectives, 6 quiz items (1 pre, 3 check, 2 post), sources and notes.
+- `model.mjs` and `model.test.mjs`
+- `page.js`
+- `walk.mjs`: one entry per step before `done`. Each entry lists a wrong answer with its `expect` hint text, then the right one with `solves: true`. Action types: `answer`, `choose`, `tap`, `slide`, `select`, `python` (with `code`), `click`, `fallback`.
+- `page.css` (optional)
+- `figure.svg`, which `tests/lesson-check.mjs` exports.
+
+**Definition of done (lessons).**
+
+1. `bun test lessons/<slug>` passes with at least 12 tests, and they pin every number the copy quotes.
+2. `bun scripts/build.mjs --only <slug>` passes.
+3. `bun tests/lesson-check.mjs <slug>` passes every check: the walkthrough, gating, Python, 390 px on every step, no console errors, reload resumes, and the thumbnail export.
+4. You opened every PNG in `shots/lesson-<slug>/` and fixed clipped, overlapping or unreadable text.
+5. A final report covering what each step teaches, the test count and the known gaps.
+
+## Machine contract — `machines/<slug>/` (legacy: being replaced by lessons)
 
 Copy `machines/_template/` to start. Files:
 
@@ -135,7 +212,7 @@ The machine catalog is generated at build time at `dist/catalog.json`: `[{ slug,
 
 ## Git and workflow
 
-- Each engineer works in **their own git worktree and branch** (`eng/<slug>` or `eng/platform`) and touches only their own folder: `machines/<slug>/`, or `server/`, `platform/pages/` and `tests/` for the platform engineer. Need a change outside your folder? Write it in your final report instead of making it.
+- Each engineer works in **their own git worktree and branch** (`eng/<slug>` or `eng/platform`) and touches only their own folder: `lessons/<slug>/` (or the legacy `machines/<slug>/`), or `server/`, `platform/pages/` and `tests/` for the platform engineer. Need a change outside your folder? Write it in your final report instead of making it.
 - Commit subjects use conventional commits of 72 characters or fewer: `feat(machine/tokenizer): ...`, `feat(platform): ...`. The body explains why. Make a few logical commits, not one giant one.
 - Never commit `dist/`, `node_modules/`, `*.db`, screenshots or `.env`.
 

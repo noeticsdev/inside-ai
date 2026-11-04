@@ -88,122 +88,50 @@ try {
   const ready = () => ev("document.querySelector('[data-gd-next]').dataset.ready");
   const fb = () => ev("document.querySelector('.gd-fb')?.textContent || ''");
   const next = async () => { await ev("document.querySelector('[data-gd-next]').click()"); await Bun.sleep(250); };
-  const answer = async (v) => { await ev(`(() => { const i = document.querySelector('.gd-task input'); i.value = '${v}'; document.querySelector('.gd-task .ia-btn').click(); })()`); await Bun.sleep(120); };
-  const choose = async (text) => { await ev(`[...document.querySelectorAll('.gd-task .gd-choice')].find(b => b.textContent.includes(${JSON.stringify(text)})).click()`); await Bun.sleep(120); };
   const solvedNow = () => ev("document.querySelector('.gd-task')?.dataset.done === 'true'");
   const shot = async (name) => { const { data } = await s("Page.captureScreenshot", { format: "png" }); writeFileSync(join(out, name), Buffer.from(data, "base64")); };
-
-  // kit
-  ok((await step()) === 0, "starts on the kit step");
-  await ev("[...document.querySelectorAll('.gd-part')].find(r => r.textContent.includes('NIC')).click()");
-  ok(await ev("document.querySelector('[data-hw=nic]').classList.contains('is-on')"), "tapping NIC in the kit list lights it on the server");
-  await ev("document.querySelector('[data-ia-predict] .ia-option').click()");
-  await shot("00-kit.png");
-  await next();
-  // 1 timestamp
-  ok((await step()) === 1, "Everything's here moves to step 1");
-  ok((await ready()) === "false", "step 1: Next is locked before the task");
-  await next();
-  ok((await step()) === 1, "step 1: a locked Next does not advance");
-  await answer(1800033);
-  ok((await fb()).includes("milliseconds"), "step 1: adding 33 ms gets the milliseconds hint");
-  await answer(1803000);
-  ok(await solvedNow(), "step 1: 1,803,000 solves it");
-  ok((await ready()) === "true", "step 1: Next unlocks");
-  await shot("01-receive.png");
-  await next();
-  // 2 NAL order
-  await ev("[...document.querySelectorAll('.gd-chip')].find(b => b.textContent.startsWith('IDR')).click()");
-  ok((await fb()).includes("PPS"), "step 2: tapping the slice first explains the PPS dependency");
-  for (const n of ["SPS", "PPS", "IDR"]) await ev(`[...document.querySelectorAll('.gd-chip')].find(b => b.textContent.startsWith('${n}')).click()`);
-  await Bun.sleep(150);
-  ok(await solvedNow(), "step 2: SPS, PPS, IDR solves it");
-  await next();
-  // 3 NV12 bytes
-  await answer(6220800);
-  ok((await fb()).includes("RGB"), "step 3: the RGB size gets a targeted hint");
-  await answer(3110400);
-  ok(await solvedNow(), "step 3: 3,110,400 solves it");
-  ok(await ev("document.querySelector('.gd-board svg').textContent.includes('3,110,400 B')"), "step 3: the readout on the server fills in the NV12 size");
-  await shot("03-decode.png");
-  await next();
-  // 4 mux
-  await choose("40 seconds");
-  ok((await fb()).includes("microseconds"), "step 4: the 40-seconds answer gets the microseconds hint");
-  await choose("Pushes the 7 frames");
-  ok(await solvedNow(), "step 4: the partial batch solves it");
-  await next();
-  // 5 tensor
-  await answer(12533760);
-  ok((await fb()).includes("2 bytes"), "step 5: counting elements gets the FP16 hint");
-  await answer(25067520);
-  ok(await solvedNow(), "step 5: 25,067,520 solves it");
-  await next();
-  // 6 NMS
-  const slide = (label, v) => ev(`(() => { const el = document.querySelector('.gd-task input[aria-label="${label}"]'); el.value = '${v}'; el.dispatchEvent(new Event('input', {bubbles: true})); })()`);
-  ok(!(await solvedNow()), "step 6: the default thresholds are wrong");
-  await slide("pre-cluster-threshold", 0.5);
-  await slide("nms-iou-threshold", 0.3);
-  ok((await ev("document.querySelector('.gd-bench .fg-verdict').textContent")).includes("walkers"), "step 6: NMS 0.3 explains the walkers merging");
-  await slide("nms-iou-threshold", 0.5);
-  ok(await solvedNow(), "step 6: 0.5 / 0.5 solves it");
-  await shot("06-detect.png");
-  await next();
-  // 7 interval
-  await answer(4);
-  ok(!(await solvedNow()), "step 7: interval 4 is rejected");
-  ok((await ev("document.querySelector('.gd-bench .fg-verdict').textContent")).includes("ID switches"), "step 7: the tracker bench shows the ID switches at interval 4");
-  await answer(3);
-  ok(await solvedNow(), "step 7: interval 3 solves it");
-  await next();
-  // 8 the counting rule
-  if (PY) {
-    await until(() => ev("Boolean(document.querySelector('.pc-cell textarea'))"), 20000);
-    await ev(`(() => { const c = document.querySelector('.pc-cell'); const ta = c.querySelector('textarea'); ta.value = "def crossed(p, c, x):\\n    if p < x <= c:\\n        return 'entry'\\n    if c < x <= p:\\n        return 'exit'\\n    return None\\n"; ta.dispatchEvent(new Event('input', {bubbles: true})); [...c.querySelectorAll('button')].find(b => /run/i.test(b.textContent)).click(); })()`);
-    const passed = await until(() => ev("document.querySelector('.gd-task')?.dataset.done === 'true'"), 90000).catch(() => false);
-    ok(Boolean(passed), "step 8: the Python cell runs in the browser, passes 5/5 and solves the step");
-  } else {
-    await ev("document.querySelector('.gd-fallback').open = true");
-    await ev("[...document.querySelectorAll('.gd-fallback .gd-choice')][1].click()");
-    ok((await fb()).includes("970"), "step 8: the off-by-one rule is explained with car-a");
-    await ev("[...document.querySelectorAll('.gd-fallback .gd-choice')][0].click()");
-    await Bun.sleep(120);
-    ok(await solvedNow(), "step 8: the no-Python fallback solves it");
+  const J = JSON.stringify;
+  const act = {
+    answer: (a) => ev(`(() => { const i = document.querySelector('.gd-task input'); i.value = ${J(String(a.value))}; document.querySelector('.gd-task .ia-btn').click(); })()`),
+    choose: (a) => ev(`[...document.querySelectorAll('.gd-task .gd-choice')].find(b => b.textContent.includes(${J(a.text)})).click()`),
+    tap: (a) => ev(`[...document.querySelectorAll('.gd-task .gd-chip')].find(b => b.textContent.startsWith(${J(a.text)})).click()`),
+    slide: (a) => ev(`(() => { const el = document.querySelector('.gd-task input[aria-label=${J(a.label)}]'); el.value = ${J(String(a.value))}; el.dispatchEvent(new Event('input', {bubbles: true})); })()`),
+    select: (a) => ev(`(() => { const el = document.querySelector('.gd-task select[aria-label=${J(a.label)}]'); el.value = ${J(String(a.value))}; el.dispatchEvent(new Event('change', {bubbles: true})); })()`),
+    fallback: (a) => ev(`(() => { document.querySelector('.gd-fallback').open = true; [...document.querySelectorAll('.gd-fallback .gd-choice')][${a.index}].click(); })()`),
+    click: (a) => ev(`document.querySelector(${J(a.selector)}).click()`),
+    python: async (a) => {
+      await until(() => ev("Boolean(document.querySelector('.gd-stage .pc-cell textarea'))"), 20000);
+      await ev(`(() => { const c = document.querySelector('.gd-stage .pc-cell'); const ta = c.querySelector('textarea'); ta.value = ${J(a.code)}; ta.dispatchEvent(new Event('input', {bubbles: true})); [...c.querySelectorAll('button')].find(b => /run/i.test(b.textContent)).click(); })()`);
+      await until(() => ev("document.querySelector('.gd-task')?.dataset.done === 'true'"), 90000).catch(() => false);
+    },
+  };
+  const walk = (await import(join(ROOT, "lessons", slug, "walk.mjs"))).default;
+  const ids = await ev("window.__lesson.steps");
+  const missions = await ev("window.__IA_DATA.missions.length");
+  ok(walk.length === ids.length - 1, `walk.mjs covers every step before done (${walk.length} of ${ids.length - 1})`);
+  for (const [n, w] of walk.entries()) {
+    const id = ids[await step()];
+    ok(id === w.step, `step ${n} is "${w.step}" (page shows "${id}")`);
+    const gated = (await ev("Boolean(document.querySelector('.gd-task'))")) && !(await solvedNow());
+    if (gated) ok((await ready()) === "false", `${w.step}: Next is locked before the task`);
+    for (const a of w.actions || []) {
+      if (a.do === "python" && !PY) { await act.fallback({ index: a.fallbackIndex ?? 0 }); await Bun.sleep(150); ok(await solvedNow(), `${w.step}: the no-Python fallback solves it`); continue; }
+      await act[a.do](a);
+      await Bun.sleep(a.do === "python" ? 0 : 150);
+      if (a.expect) ok((await fb()).includes(a.expect), `${w.step}: ${a.do} ${a.value ?? a.text ?? a.label ?? ""} → hint mentions "${a.expect}"`);
+      if (a.expectStage) ok((await ev("document.querySelector('[data-gd-stage]').textContent")).includes(a.expectStage), `${w.step}: the stage shows "${a.expectStage}"`);
+      if (a.solves) ok(await solvedNow(), `${w.step}: ${a.do === "python" ? "the Python cell passes and solves it" : `${a.do} ${a.value ?? a.text ?? a.label ?? ""} solves it`}`);
+      if (a.solves === false) ok(!(await solvedNow()), `${w.step}: ${a.do} ${a.value ?? a.text ?? ""} does not solve it`);
+    }
+    if (gated) ok((await ready()) === "true", `${w.step}: Next unlocks once solved`);
+    await shot(`${String(n).padStart(2, "0")}-${w.step}.png`);
+    await next();
   }
-  await shot("08-count.png");
-  await next();
-  // 9 event time
-  await answer(25);
-  ok((await fb()).includes("frame number"), "step 9: the frame number gets a hint");
-  await answer(833);
-  ok(await solvedNow(), "step 9: 833 solves it");
-  ok(await ev("document.querySelector('.cu-json').textContent.includes('18:00:00.833Z')"), "step 9: the JSON fills in the timestamp");
-  await shot("09-publish.png");
-  await next();
-  // 10 bottleneck
-  await choose("NVDEC");
-  ok((await fb()).includes("53.3%"), "step 10: NVDEC is rejected with its real load");
-  await choose("GPU SMs");
-  ok(await solvedNow(), "step 10: the SMs solve it");
-  ok(await ev("document.querySelector('[data-hw=sm]').classList.contains('is-over')"), "step 10: the SMs turn red on the server");
-  await shot("10-scale.png");
-  await next();
-  // 11 keep up
-  const pick = (label, v) => ev(`(() => { const el = document.querySelector('.gd-task select[aria-label="${label}"]'); el.value = '${v}'; el.dispatchEvent(new Event('change', {bubbles: true})); })()`);
-  await pick("batch-size", 4);
-  await pick("interval", 4);
-  ok((await fb()).includes("breaks the tracker"), "step 11: interval 4 is under budget but breaks the tracker");
-  await pick("interval", 0);
-  await pick("batch-size", 16);
-  ok(await solvedNow(), "step 11: batch 16, interval 0 solves it");
-  await shot("11-keepup.png");
-  await next();
-  // done
   ok((await ev("window.__lesson.steps[window.__lesson.state.step]")) === "done", "reaches the done step");
-  ok((await ev("Object.keys(window.IA.progress().missions).length")) === 11, "all 11 step tasks recorded in progress");
-  ok((await ev("document.querySelector('[data-ia-count]').textContent")) === "11/11", "the top bar counts 11/11 tasks");
-  ok(await ev("document.querySelector('.gd-config pre').textContent.includes('batch-size=16')"), "the config carries the reader's batch-size");
-  await shot("12-done.png");
+  ok((await ev("Object.keys(window.IA.progress().missions).length")) === missions, `all ${missions} step tasks recorded in progress`);
+  ok((await ev("document.querySelector('[data-ia-count]').textContent")) === `${missions}/${missions}`, `the top bar counts ${missions}/${missions} tasks`);
+  ok((await ev("document.querySelector('.gd-config pre')?.textContent.length || 0")) > 40, "the done step hands back an artifact");
+  await shot("zz-done.png");
   // thumbnail: the finished server, computed styles inlined
   const thumb = await ev(`(() => {
     const src = document.querySelector('.gd-board svg');
@@ -226,17 +154,17 @@ try {
   ok((await ev("window.__lesson.steps[window.__lesson.state.step]")) === "done", "a reload resumes where the reader left off");
   // every step at 390 px and in dark mode
   for (const t of ["light", "dark"]) {
-    for (let i = 0; i < 13; i++) {
+    for (let i = 0; i < ids.length; i++) {
       await goto(`?theme=${t}&step=${i}`, 390, 844);
       const over = await ev("document.documentElement.scrollWidth - document.documentElement.clientWidth");
       if (over > 1) ok(false, `390px ${t} step ${i}: horizontal scroll (${over}px)`);
     }
-    ok(true, `390px ${t}: checked all 13 steps for horizontal scroll`);
+    ok(true, `390px ${t}: checked all ${ids.length} steps for horizontal scroll`);
   }
-  await goto("?theme=dark&step=3", 1440, 900);
-  await shot("03-decode-dark.png");
-  await goto("?theme=light&step=6", 390, 844);
-  await full("phone-06.png", 390);
+  await goto("?theme=dark&step=1", 1440, 900);
+  await shot("dark-01.png");
+  await goto(`?theme=light&step=${Math.max(1, Math.floor(ids.length / 2))}`, 390, 844);
+  await full("phone-mid.png", 390);
   ok(errors.length === 0, `no console errors overall${errors.length ? ": " + [...new Set(errors)].join(" | ") : ""}`);
 } catch (e) {
   fail.push(String(e));
