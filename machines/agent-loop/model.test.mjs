@@ -1,0 +1,16 @@
+import {test,expect} from 'bun:test';
+import * as M from './model.mjs';
+import content from './content.mjs';
+const grid=[];
+for(const task of Object.keys(M.TASKS)) for(const maxSteps of [1,2,3,4,5]) for(const budget of [50,80,120,180]) for(const flaky of [false,true]) for(const retry of [false,true]) for(const approval of [false,true]) grid.push({task,maxSteps,budget,flaky,retry,approval});
+test('weather exact context and calls',()=>expect(M.simulate().totals).toEqual({tokens:64,messages:4,turns:2,calls:1,attempts:1,blocked:0,failures:0,status:'answered'}));
+test('research accumulates three call and result pairs',()=>expect(M.simulate({task:'research'}).totals).toEqual({tokens:138,messages:8,turns:4,calls:3,attempts:3,blocked:0,failures:0,status:'answered'}));
+test('budget checks before next turn',()=>expect(M.simulate({task:'research',budget:50}).totals).toEqual({tokens:56,messages:3,turns:1,calls:1,attempts:1,blocked:0,failures:0,status:'budget'}));
+test('turn guard stops research',()=>expect(M.simulate({task:'research',maxSteps:2}).totals.status).toBe('step limit'));
+test('flaky call fails without retry and succeeds with it',()=>{expect(M.simulate({flaky:true}).totals.status).toBe('tool error');expect(M.simulate({flaky:true,retry:true}).totals).toEqual({tokens:64,messages:4,turns:2,calls:1,attempts:2,blocked:0,failures:1,status:'answered'});});
+test('blocked deletion and retry recover',()=>expect(M.simulate({task:'error',retry:true}).totals).toEqual({tokens:89,messages:6,turns:3,calls:1,attempts:2,blocked:1,failures:1,status:'answered'}));
+test('gate off permits the simulated deletion',()=>expect(M.simulate({task:'error',approval:false,retry:true}).totals.blocked).toBe(0));
+test('grid is deterministic and event indices and context are monotonic',()=>{for(const c of grid){const r=M.simulate(c);expect(M.simulate(c)).toEqual(r);r.events.forEach((e,i)=>{expect(e.index).toBe(i);expect(e.trace.length).toBeGreaterThan(0);if(i)expect(e.tokens).toBeGreaterThanOrEqual(r.events[i-1].tokens);});}});
+test('URLs round trip controls and reject garbage',()=>{for(const c of grid)expect(M.decode('?'+M.encode(c))).toEqual(c);expect(M.decode('?task=bad&maxSteps=bad&budget=bad&flaky=bad&retry=bad&approval=bad')).toEqual(M.DEFAULTS);});
+test('each mission is reachable using controls, defaults do not pass all',()=>{for(const m of M.MISSIONS){expect(m.check(M.simulate(m.try))).toBe(true);expect(grid.some(c=>m.check(M.simulate(c)))).toBe(true);}expect(M.MISSIONS.every(m=>m.check(M.simulate()))).toBe(false);});
+test('quiz has six valid staged questions',()=>{expect(content.quiz.map(q=>q.stage)).toEqual(['pre','check','check','check','post','post']);for(const q of content.quiz){expect(q.options).toHaveLength(4);expect(q.correct).toBeGreaterThanOrEqual(0);expect(q.correct).toBeLessThan(4);expect(q.explanation.length).toBeGreaterThan(10);}});
