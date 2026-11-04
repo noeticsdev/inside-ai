@@ -78,7 +78,8 @@ function thumbnail(svg) {
   return svg
     .replace(/<svg ([^>]*?)class="([^"]*)"/, '<svg $1class="$2 iso iso-ink" data-theme="light"')
     .replace(/(<svg[^>]*>)/, `$1<style>${css}</style>`)
-    .replace(/filter="url\(#iso-hand\)"/g, "");
+    .replace(/filter="url\(#iso-hand\)"/g, "")
+    .replace(/<[a-zA-Z][^>]*>/g, (tag) => tag.replace(/\s(data-[\w-]+)(?=[\s>/])(?!=)/g, ' $1=""'));
 }
 
 const list = slugs();
