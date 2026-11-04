@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { machinePage } from "../platform/shell/page.mjs";
+import * as kit from "../kit/iso-kit.mjs";
+import * as inkKit from "../kit/ink.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -70,6 +72,15 @@ ${live}
   return await result.outputs[0].text();
 }
 
+// A standalone light-theme still of the machine for catalog cards: the page CSS is embedded in the SVG.
+function thumbnail(svg) {
+  const css = `${kit.ISO_CSS}${inkKit.INK_CSS}`.replace(/<\/style/gi, "");
+  return svg
+    .replace(/<svg ([^>]*?)class="([^"]*)"/, '<svg $1class="$2 iso iso-ink" data-theme="light"')
+    .replace(/(<svg[^>]*>)/, `$1<style>${css}</style>`)
+    .replace(/filter="url\(#iso-hand\)"/g, "");
+}
+
 const list = slugs();
 if (!list.length) {
   console.error(ONLY ? `no machine "${ONLY}" with ${REQUIRED.join(", ")}` : "no machines found");
@@ -113,6 +124,7 @@ for (const [i, m] of machines.entries()) {
     const dir = join(OUT, "m", m.slug);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "index.html"), html);
+    writeFileSync(join(dir, "figure.svg"), thumbnail(m.fig.svg));
     console.log(`✓ ${m.slug.padEnd(22)} ${(html.length / 1024).toFixed(0).padStart(5)} KB  ${m.missions.length} missions`);
   } catch (error) {
     console.error(`✗ ${m.slug}: ${error.stack || error}`);
