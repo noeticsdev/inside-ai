@@ -41,7 +41,7 @@ export async function applyEvents(db: Client, userId: string, events: any[]) {
       const d = e.data;
       if (e.type === 'mission') p.missions[d.id] ||= e.at;
       if (e.type === 'predict' && !p.predict) { p.predict = { ...d, at: e.at }; p.answers[0] = { ...d }; }
-      if (e.type === 'answer') p.answers[d.index] = { ...d, at: e.at };
+      if (e.type === 'answer' && e.at >= (p.answers[d.index]?.at ?? 0)) p.answers[d.index] = { ...d, at: e.at };
       if (e.type === 'heartbeat') p.seconds += d.seconds;
       if (e.type === 'run') p.runs++;
       if (e.type === 'quiz_done') {
@@ -76,8 +76,9 @@ export async function importProgress(db: Client, userId: string, incoming: any, 
       if (object(v.predict) && Number.isInteger(v.predict.answer) && v.predict.answer >= 0 && v.predict.answer < 4 && !p.predict) p.predict = { answer: v.predict.answer, correct: v.predict.answer === m.quiz[0].correct, at: stamp };
       if (object(v.answers)) for (const [index, a] of Object.entries(v.answers)) {
         const q = m.quiz[Number(index)];
-        if (q && object(a) && Number.isInteger(a.answer) && a.answer >= 0 && a.answer < 4 && (!p.answers[index] || stamp >= p.last)) p.answers[index] = { answer: a.answer, correct: a.answer === q.correct };
+        if (q && q.stage !== 'pre' && object(a) && Number.isInteger(a.answer) && a.answer >= 0 && a.answer < 4 && (!p.answers[index] || stamp >= p.last)) p.answers[index] = { answer: a.answer, correct: a.answer === q.correct, at: stamp };
       }
+      if (p.predict) p.answers[0] = { ...p.predict };
       if (object(v.quiz) && Number.isInteger(v.quiz.score) && v.quiz.score >= 0 && v.quiz.score <= 5 && v.quiz.of === 5) {
         const best = Number.isInteger(v.quiz.best) && v.quiz.best >= 0 && v.quiz.best <= 5 ? v.quiz.best : v.quiz.score;
         p.quiz = { score: stamp >= p.last ? v.quiz.score : (p.quiz?.score ?? v.quiz.score), best: Math.max(p.quiz?.best ?? 0,best,v.quiz.score) };

@@ -5,7 +5,12 @@
   "scripts": {
     "build": "bun scripts/build.mjs",
     "verify": "bun scripts/verify.mjs",
-    "test": "bun test"
+    "test": "bun test",
+    "start": "bun server/server.ts",
+    "dev": "bun --watch server/server.ts",
+    "test:platform": "bun test tests",
+    "preview:platform": "bun scripts/build.mjs --only _template && bun tests/preview-platform.mjs",
+    "verify:platform": "bun tests/verify-platform.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

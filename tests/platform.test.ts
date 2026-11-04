@@ -1,6 +1,6 @@
 import { test, expect, beforeEach, afterEach, setDefaultTimeout } from 'bun:test';
 import { createClient, type Client } from '@libsql/client';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { migrate } from '../server/db';
@@ -74,3 +74,88 @@ test('static assets have type and a short cache lifetime',async () => { const r=
 test('unknown pages use 404 fallback and API stays JSON',async () => { const r=await request('/missing/'); expect(r.status).toBe(404); expect(await r.text()).toContain('Lost machine'); const api=await request('/api/nope'); expect(api.status).toBe(404); expect(api.headers.get('content-type')).toContain('application/json'); });
 test('static server refuses hidden files and encoded traversal',async () => { for (const path of ['/.env','/%2e%2e%2fpackage.json','/x%5c..%5c.env']) expect((await request(path)).status).toBe(404); });
 test('migrations are idempotent',async () => { await signup(); await migrate(db); expect((await db.execute('SELECT COUNT(*) AS n FROM users')).rows[0].n).toBe(1); });
+
+test('concurrent event batches preserve every run and heartbeat',async () => {
+  const cookie=cookieOf(await signup());
+  const responses=await Promise.all(Array.from({length:8},()=>send(cookie,[event('run'),event('heartbeat',{seconds:15})])));
+  expect(responses.map(r=>r.status)).toEqual(Array(8).fill(200));
+  const p=(await progress(cookie)).tokens;
+  expect(p.runs).toBe(8); expect(p.seconds).toBe(120);
+});
+test('a delayed answer cannot replace a newer checkpoint answer',async () => {
+  const cookie=cookieOf(await signup());const now=Date.now();
+  await send(cookie,[event('answer',{index:1,stage:'check',answer:1},'tokens',now)]);
+  await send(cookie,[event('answer',{index:1,stage:'check',answer:2},'tokens',now-10000)]);
+  expect((await progress(cookie)).tokens.answers[1].answer).toBe(1);
+});
+test('a later prediction cannot alter the original guess',async () => {
+  const cookie=cookieOf(await signup());
+  await send(cookie,[event('predict',{answer:2}),event('predict',{answer:0})]);
+  expect((await progress(cookie)).tokens.predict.answer).toBe(2);
+});
+test('production cookies are Secure and logout revokes only the current token',async () => {
+  const previous=process.env.NODE_ENV;process.env.NODE_ENV='production';
+  try {
+    const a=await signup();expect(a.headers.get('set-cookie')).toContain('Secure');
+    const first=cookieOf(a);const second=cookieOf(await request('/api/auth/login',{email:'learner@example.com',password:'password123'}));
+    await request('/api/auth/logout',{},first);
+    expect((await (await request('/api/me',undefined,second)).json()).user.email).toBe('learner@example.com');
+  } finally { if(previous===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=previous; }
+});
+test('garbage cookies do not authenticate and API responses never cache',async () => {
+  const r=await request('/api/me',undefined,'ia_session=not-a-token');
+  expect((await r.json()).user).toBeNull();expect(r.headers.get('cache-control')).toBe('no-store');
+});
+test('event timestamps, answer stages and multibyte payload sizes are checked',async () => {
+  for(const e of [event('run',{},'tokens',Date.now()+600000),event('run',{},'tokens',-1),event('answer',{index:1,stage:'post',answer:1}),event('predict',{answer:4}),event('control',{name:'text',value:'😀'.repeat(600)})])expect((await send('',[e])).status).toBe(400);
+});
+test('an older imported snapshot preserves newer answers and last score',async () => {
+  const {learner}=await cohort();
+  await request('/api/progress/import',{progress:{tokens:{answers:{2:{answer:2}},quiz:{score:5,best:5,of:5},last:Date.now()-60000}}},learner);
+  const p=(await progress(learner)).tokens;
+  expect(p.answers[2].correct).toBe(false);expect(p.quiz.score).toBe(4);expect(p.quiz.best).toBe(5);
+});
+test('HEAD requests preserve headers and status without a body',async () => {
+  for(const [path,status] of [['/',200],['/missing',404]] as const){const r=await app.request(`http://localhost${path}`,{method:'HEAD'});expect(r.status).toBe(status);expect(await r.text()).toBe('');expect(r.headers.get('content-type')).toContain('text/html');}
+});
+test('concurrent import, event writes and progress reads share a connection safely',async()=>{
+  const cookie=cookieOf(await signup());
+  const responses=await Promise.all([
+    request('/api/progress/import',{progress:{tokens:{runs:1,seconds:30,last:Date.now()}}},cookie),
+    send(cookie,[event('run'),event('heartbeat',{seconds:15})]),
+    request('/api/progress',undefined,cookie),request('/api/me/summary',undefined,cookie),
+  ]);
+  expect(responses.map(r=>r.status)).toEqual([200,200,200,200]);
+  const p=(await progress(cookie)).tokens;expect(p.runs).toBeGreaterThanOrEqual(1);expect(p.seconds).toBeGreaterThanOrEqual(30);
+});
+test('offline prediction is included in per-question insights',async()=>{
+  const {learner,educator,group}=await cohort();
+  await request('/api/progress/import',{progress:{vectors:{predict:{answer:0},last:Date.now()}}},learner);
+  const data=await(await request(`/api/classes/${group.id}/insights`,undefined,educator)).json();
+  expect(data.questions.find((q:any)=>q.slug==='vectors'&&q.index===0)).toMatchObject({responses:1,percentCorrect:100});
+});
+test('question analytics count the latest response once after a retake',async()=>{
+  const {learner,educator,group}=await cohort();await send(learner,[event('answer',{index:2,stage:'check',answer:2})]);
+  const data=await(await request(`/api/classes/${group.id}/insights`,undefined,educator)).json();
+  expect(data.questions[2]).toMatchObject({responses:1,correct:1,percentCorrect:100});
+});
+test('streak uses consecutive UTC days with yesterday as a grace day',async()=>{
+  const cookie=cookieOf(await signup());const day=new Date();day.setUTCHours(0,0,0,0);
+  await send(cookie,[1,2,4].map(n=>event('view',{},'tokens',day.getTime()-n*86400000+43200000)));
+  const data=await(await request('/api/me/summary',undefined,cookie)).json();expect(data.streakDays).toBe(2);
+});
+
+test('static serving refuses a symlink to files outside dist',async()=>{
+  const outside=await mkdtemp(join(tmpdir(),'ia-outside-'));
+  try {await writeFile(join(outside,'secret.txt'),'private');await symlink(join(outside,'secret.txt'),join(dir,'public.txt'));expect((await request('/public.txt')).status).toBe(404);}
+  finally {await rm(outside,{recursive:true,force:true});}
+});
+
+test('concurrent guest upgrades cannot overwrite account credentials',async()=>{
+  const guest=cookieOf(await request('/api/auth/guest',{}));
+  const responses=await Promise.all([signup('first@example.com','learner',guest),signup('second@example.com','educator',guest)]);
+  expect(responses.map(r=>r.status).sort()).toEqual([201,409]);
+  const winner=responses.find(r=>r.status===201)!;const user=(await winner.json()).user;
+  expect((await request('/api/auth/login',{email:user.email,password:'password123'})).status).toBe(200);
+  expect((await db.execute('SELECT COUNT(*) AS n FROM users')).rows[0].n).toBe(1);
+});

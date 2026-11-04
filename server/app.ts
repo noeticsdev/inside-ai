@@ -2,16 +2,18 @@ import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { bodyLimit } from 'hono/body-limit';
 import type { Client } from '@libsql/client';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, realpath } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
+import { serializedClient } from './serialized';
 import { id, token, hash, passwordHash, passwordMatches, RateLimit } from './auth';
-import { getProgress, validateEvents, applyEvents, importProgress, summary, type Machine, object } from './progress';
+import { getProgress, validateEvents, applyEvents, importProgress, summary, type Machine, object, unpack as unpackProgressRow } from './progress';
 
 type Options = { db: Client; distDir: string; catalog: Machine[]; allowMissingOrigin?: boolean; getClientIp?: (request: Request) => string };
 const publicUser = (u: any) => u ? { id: u.id, name: u.name, email: u.email, role: u.role, guest: Boolean(u.guest) } : null;
 const age = 30 * 86400;
 const dummy = passwordHash(token());
 export function createApp({ db, distDir, catalog, allowMissingOrigin = false, getClientIp = () => 'unknown' }: Options) {
+  db = serializedClient(db);
   const app = new Hono<{ Variables: { user: any; session: string | null; body: any } }>();
   const rate = new RateLimit();
   app.use('*', async (c,next) => {
@@ -62,7 +64,10 @@ export function createApp({ db, distDir, catalog, allowMissingOrigin = false, ge
     const userId = auth(c)?.id || id();
     const encrypted = await passwordHash(b.password);
     try {
-      if (auth(c)?.guest) await db.execute({ sql: 'UPDATE users SET email=?,name=?,role=?,password_hash=?,guest=0 WHERE id=?', args: [email,b.name.trim(),b.role,encrypted,userId] });
+      if (auth(c)?.guest) {
+        const upgraded = await db.execute({ sql: 'UPDATE users SET email=?,name=?,role=?,password_hash=?,guest=0 WHERE id=? AND guest=1', args: [email,b.name.trim(),b.role,encrypted,userId] });
+        if (!upgraded.rowsAffected) return c.json({ error: 'This guest account was already upgraded. Sign in to continue.' },409);
+      }
       else await db.execute({ sql: 'INSERT INTO users(id,email,name,role,password_hash,guest,created_at) VALUES(?,?,?,?,?,0,?)', args: [userId,email,b.name.trim(),b.role,encrypted,Date.now()] });
     } catch (e: any) { if (String(e.code).includes('CONSTRAINT')) return c.json({ error: 'This email already has an account. Sign in instead.' },409); throw e; }
     await sessionFor(c,userId);
@@ -179,7 +184,9 @@ export function createApp({ db, distDir, catalog, allowMissingOrigin = false, ge
         if (!path.endsWith('/')) return c.redirect(path+'/'+new URL(c.req.url).search,308);
         file = resolve(file,'index.html');
       }
-      const content = await readFile(file);
+      const [realRoot, realFile] = await Promise.all([realpath(root), realpath(file)]);
+      if (!realFile.startsWith(realRoot+sep)) return c.text('Not found',404);
+      const content = await readFile(realFile);
       c.header('Content-Type',mime[extname(file)] || 'application/octet-stream');
       c.header('Cache-Control',extname(file) === '.html' || extname(file) === '.json' ? 'no-cache' : 'public, max-age=3600');
       return c.body(c.req.method === 'HEAD' ? null : content);
@@ -192,4 +199,3 @@ export function createApp({ db, distDir, catalog, allowMissingOrigin = false, ge
   app.onError((error,c) => { console.error('Inside AI request failed:',error); return c.json({ error: 'Something went wrong. Please try again.' },500); });
   return app;
 }
-import { unpack as unpackProgressRow } from './progress';
