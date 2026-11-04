@@ -57,7 +57,8 @@ try {
  }
  await goto('/');
  await evaluate('document.querySelector(\'[data-filter="systems"]\').click()');
- check(await evaluate('[...document.querySelectorAll("[data-machine]")].filter(e=>!e.hidden).length === 3'),'track filter did not show three systems machines');
+ const systems=catalog.filter(m=>m.track==='systems').length;
+ check(await evaluate(`[...document.querySelectorAll("[data-machine]")].filter(e=>!e.hidden).length === ${systems}`),`track filter did not show ${systems} systems machines`);
  await evaluate('document.querySelector(\'[data-theme-toggle]\').click()');
  check(await evaluate('localStorage.getItem("ia:theme")==="dark"'),'theme did not persist');
  await goto('/login/?mode=signup&next=%2Fme%2F');

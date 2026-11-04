@@ -10,7 +10,8 @@
     "dev": "bun --watch server/server.ts",
     "test:platform": "bun test tests",
     "preview:platform": "bun scripts/build.mjs --only _template && bun tests/preview-platform.mjs",
-    "verify:platform": "bun tests/verify-platform.mjs"
+    "verify:platform": "bun tests/verify-platform.mjs",
+    "test:e2e": "bun tests/e2e-machine.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
