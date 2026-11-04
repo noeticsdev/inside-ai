@@ -217,7 +217,7 @@ function draw() {
   }
 
   // Threads rebuild when the shuttle, the reveal or the weights change.
-  const tkey = `${pose.shx.toFixed(2)}|${pose.shown}|${pose.cur}|${pose.grow.toFixed(3)}|${state.explode.target.toFixed(2)}`;
+  const tkey = `${pose.shx.toFixed(2)}|${pose.shown}|${pose.cur}|${pose.grow.toFixed(3)}|${state.explode.target.toFixed(2)}|${state.config.head}|${state.config.scale}|${state.config.causal}|${state.config.temp}`;
   if (tkey !== lastThreadKey) {
     lastThreadKey = tkey;
     const fade = 1 - state.explode.target;
@@ -231,9 +231,15 @@ function draw() {
         wrap.setAttribute("opacity", fade.toFixed(2));
         el.setAttribute("d", threadPath(i, frac));
         const w = state.weights[i] || 0;
-        el.setAttribute("stroke-width", state.masked[i] ? "1.1" : (1 + w * 7 + (i === state.topIndex ? 0.8 : 0)).toFixed(2));
-        el.setAttribute("class", "iso-line");
-        el.setAttribute("data-tone", state.masked[i] ? "faint" : "hi");
+        el.setAttribute("stroke-width", state.masked[i] ? "1.2" : (0.6 + w * 6.4).toFixed(2));
+        el.setAttribute("stroke", state.masked[i] ? "var(--ink-soft)" : i === state.topIndex ? "var(--ia-accent)" : "var(--ink)");
+        const cut = live(`cut${i}`);
+        if (state.masked[i]) {
+          const a = [pose.shx, D.RAIL_Y, D.SH_Z];
+          const b = [D.XS[i], D.POST_Y, D.CARD_Z];
+          const p = K.iso([lerp(a[0], b[0], 0.3), lerp(a[1], b[1], 0.3), lerp(a[2], b[2], 0.3) - Math.sin(Math.PI * 0.3) * 0.6 * 0.3], D.P);
+          cut.setAttribute("d", `M${p[0]-2.5} ${p[1]-2.5}l5 5m-5 0l5 -5`);
+        } else cut.setAttribute("d", "");
         if (state.masked[i]) el.setAttribute("stroke-dasharray", "3 2");
         else el.removeAttribute("stroke-dasharray");
       }

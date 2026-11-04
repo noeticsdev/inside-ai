@@ -9,7 +9,7 @@ import { TOKENS } from "./model.mjs";
 
 export function figure() {
   const W = 760;
-  const H = 470;
+  const H = 390;
   const AZIMUTH = 60;
   const PLATE = { x: -84, y: -36, w: 168, d: 78, r: 5 };
   const XS = TOKENS.map((_, i) => -63 + i * 14);
@@ -24,7 +24,7 @@ export function figure() {
   };
 
   const P = k.fitProjection(
-    [...k.boxCorners(PLATE, -6, 0), [-63, POST_Y, 60], [63, POST_Y, 60], [0, RAIL_Y, 62], [2, 30, 58], [48, 28, 60], [-52, 28, 44], [0, 2, 62]],
+    [...k.boxCorners(PLATE, -6, 0), [-79, -26, 40], [79, -26, 40], [0, RAIL_Y, 43], [2, 30, 40], [48, 28, 40], [-52, 28, 30], [0, 2, 42]],
     W, H, { pad: 22, azimuth: AZIMUTH },
   );
   const depth = (p) => k.depthOf(p, P);
@@ -76,8 +76,8 @@ export function figure() {
     put(`cap${i}`, "score", [xi, POST_Y, 9.5], cyl(xi, POST_Y, 1.5, 9.2, 1, { tone: "hi" }, 18), 3);
     put(`clip${i}`, "score", [xi, POST_Y - 0.6, 10], box(xi - 1, POST_Y - 1.4, 9, xi + 1, POST_Y + 0.2, 11, { tone: "lo" }, 0.2), 3);
     put(`card${i}`, "score", [xi, POST_Y + 0.6, 13.5],
-      box(xi - 5, POST_Y + 0.4, 10.5, xi + 5, POST_Y + 1.6, CARD_Z, { tone: "hi" }, 0.3) +
-      k.faceTextSvg(k.sideMatrix([xi - 4.4, POST_Y + 1.7], 12.4, P, "left"), TOKENS[i], { size: 2.6, tone: "hi" }), 4);
+      box(xi - 5.8, POST_Y + 0.4, 10.5, xi + 5.8, POST_Y + 1.6, CARD_Z, { tone: "hi" }, 0.3) +
+      k.faceTextSvg(k.sideMatrix([xi - 5.3, POST_Y + 1.7], 11.7, P, "left"), TOKENS[i], { size: TOKENS[i].length > 5 ? 2.6 : 3.6, tone: "hi" }), 300);
     put(`eye${i}`, "score", [xi, POST_Y + 1, CARD_Z], k.lineSvg(k.ring(xi, POST_Y + 1, 0.9, CARD_Z, P, 12), { tone: "lo" }), 5);
     put(`ingot${i}`, "score", [xi, POST_Y + 3.4, 1], box(xi - 3.4, POST_Y + 2.1, 0, xi + 3.4, POST_Y + 4.7, 1.6, { tone: "hi" }, 0.3), 5);
   });
@@ -90,9 +90,9 @@ export function figure() {
   put("tip", "query", [0, RAIL_Y, 20], cyl(0, RAIL_Y, 1, 18.6, 2.6, { tone: "hi" }, 14), 8);
 
   // ---- scaling gantry over the thread fan ----
-  for (const gx of [-76, 76]) put(`gatepost-${gx}`, "score", [gx, 2, 13], cyl(gx, 2, 1.6, 0, 26, {}, 18), 1);
-  put("gatebeam", "score", [0, 2, 27], box(-77.5, 1.2, 26.2, 77.5, 2.8, 27.6, { tone: "lo" }, 0.4), 2);
-  put("gateweight", "score", [0, 2, 24], `<g data-live="gateweight">${box(-4, 0.8, 21.5, 4, 3.2, 25.5, { tone: "hi" }, 0.4)}</g>`, 3);
+  for (const gx of [-82, 82]) put(`gatepost-${gx}`, "score", [gx, 2, 13], cyl(gx, 2, 1.6, 0, 26, {}, 18), 1);
+  put("gatebeam", "score", [0, 2, 27], box(-83.5, 1.2, 26.2, 83.5, 2.8, 27.6, { tone: "lo" }, 0.4), 2);
+  put("gateweight", "score", [-73, 2, 24], `<g data-live="gateweight">${box(-77, 0.8, 21.5, -69, 3.2, 25.5, { tone: "hi" }, 0.4)}</g>`, 3);
 
   // ---- causal shutter rail + live blade ----
   put("shutterrail", "score", [0, -20, 16], box(-70, -21, 15.5, 70, -19.5, 16.5, { tone: "lo" }, 0.2), 1);
@@ -125,7 +125,7 @@ export function figure() {
 
   // ---- threads (live paths) + dropped coils for masked keys ----
   XS.forEach((xi, i) => {
-    put(`thread${i}`, "score", [(xi) / 2, 1, 19], `<g data-live="threadwrap${i}" opacity="1"><path data-live="thread${i}" fill="none" stroke-width="2" stroke-linecap="round" d=""/></g>`, 10);
+    put(`thread${i}`, "score", [(xi) / 2, 1, 19], `<g data-live="threadwrap${i}" opacity="1"><path data-live="thread${i}" fill="none" stroke-linecap="round" d=""/><path data-live="cut${i}" fill="none" stroke="var(--bad)" stroke-width="2" stroke-linecap="round" d=""/></g>`, 10);
     const coilPts = [];
     for (let s = 0; s <= 40; s++) {
       const a = (s / 40) * Math.PI * 4;
@@ -137,10 +137,10 @@ export function figure() {
 
   const V = [depth([1, 0, 0]), depth([0, 1, 0]), depth([0, 0, 1])];
   const LABELS = [
-    { asm: "query", at: [0, RAIL_Y, 24], dx: -88, dy: -34, follow: "x" },
+    { asm: "query", at: [0, RAIL_Y, 24], dx: -95, dy: 30, follow: "x" },
     { asm: "score", at: [20, POST_Y, 20], dx: 6, dy: -96 },
-    { asm: "weigh", at: [2, 30, 14], dx: 66, dy: -76 },
-    { asm: "mix", at: [48, 28, 12], dx: 72, dy: -30 },
+    { asm: "weigh", at: [2, 30, 14], dx: -32, dy: 36 },
+    { asm: "mix", at: [48, 28, 12], dx: 48, dy: 32 },
   ];
   const data = { P, V, XS, POST_Y, RAIL_Y, SH_Z, CARD_Z, EXPLODE, LABELS, CONCEPT, DIAL: [-52, 28, 3.2], items: items.map(({ id, asm, key }) => ({ id, asm, key })) };
   const LABEL = "A loom where a query shuttle sends threads to ten token posts. Thread thickness is the attention weight; cut threads are masked; the funnel and cup mix the values.";
