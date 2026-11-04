@@ -333,7 +333,7 @@ export function createGuide({ M, steps, board, onBoard, done = {}, phaseNames = 
             if (res === true) ok({ [se.label]: el.value });
             else if (typeof res === "string") fail(res);
           };
-          return el;
+          return h("label", { class: "gd-sel" }, h("span", { text: se.label }), el);
         });
         return [h("p", { text: prompt }), h("div", { class: "gd-row" }, els)];
       },

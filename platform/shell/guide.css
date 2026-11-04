@@ -228,3 +228,7 @@
 .meter text { font-size: 14.5px; }
 .gd-h-row { justify-content: space-between; }
 .gd-h-row .gd-tool { height: 30px; }
+.gd-sel { display: grid; gap: 4px; font: 600 12px var(--ia-mono); color: var(--ia-muted); }
+/* keep the big step number clear of the board */
+.gd-stage:has(.gd-num) .gd-board { padding-left: 112px; }
+@media (max-width: 900px) { .gd-stage:has(.gd-num) .gd-board { padding-left: 10px; } }
