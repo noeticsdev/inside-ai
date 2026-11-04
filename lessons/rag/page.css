@@ -1,0 +1,32 @@
+.rag-title { fill: var(--ia-strong); font: 700 15px var(--ia-mono); }
+.rag-heading { fill: var(--ia-muted); font: 700 14px var(--ia-mono); letter-spacing: .05em; }
+.rag-text { fill: var(--ia-strong); font: 14px var(--ia-mono); }
+.rag-muted { fill: var(--ia-muted); font: 13px var(--ia-mono); }
+.rag-accent { fill: var(--ia-accent); font: 700 14px var(--ia-mono); }
+.rag-small { fill: var(--ia-strong); font: 700 13px var(--ia-mono); }
+.rag-window, .rag-window-alt { fill: none; stroke: var(--ia-accent); stroke-width: 1.7; }
+.rag-window-alt { stroke-dasharray: 3 2; }
+.rag-bar { fill: var(--ia-sunk); stroke: var(--ia-muted); stroke-width: 1; }
+.rag-bar-active { fill: var(--ia-accent-soft); stroke: var(--ia-accent); stroke-width: 1; }
+.rag-reserve { fill: var(--ia-card); stroke: var(--ia-strong); stroke-width: 1; }
+.rag-cut { fill: none; stroke: var(--ia-accent); stroke-width: 1; stroke-dasharray: 4 3; }
+.rag-over { fill: var(--ia-bad-soft); stroke: var(--ia-bad); stroke-width: 2; }
+.rag-citation { fill: none; stroke: var(--ia-accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.gd-close-body svg { display: block; width: 100%; height: auto; }
+.rag-hatch { stroke: var(--ia-accent); stroke-width: .8; opacity: .65; }
+.rag-ghost { fill: var(--ia-sunk); stroke: var(--ia-line); stroke-dasharray: 5 4; }
+.rag-ghost-t { fill: var(--ia-muted); font: 700 13px var(--ia-mono); }
+.rag-gold { fill: var(--ia-accent-soft); }
+.rag-row-on { fill: var(--ia-accent-soft); }
+.rag-row-cite { fill: none; stroke: var(--ia-accent); stroke-width: 1.5; }
+.rag-bar-dark { fill: var(--ia-strong); }
+.rag-bar-q, .rag-dot { fill: var(--ia-accent); }
+.rag-axis, .rag-dash { stroke: var(--ia-line); stroke-width: 1; }
+.rag-dash { stroke-dasharray: 4 3; }
+.rag-split, .rag-limit { stroke: var(--ia-bad); stroke-width: 2; }
+.rag-bad, .rag-seg-bad { fill: var(--ia-bad); font: 700 13px var(--ia-mono); }
+.rag-ok { fill: var(--ia-strong); font: 700 13px var(--ia-mono); }
+.rag-seg { fill: var(--ia-strong); font: 13px var(--ia-mono); }
+.rag-seg-over, .rag-tag-bad { fill: var(--ia-bad-soft); stroke: var(--ia-bad); }
+.rag-tag { fill: var(--ia-accent-soft); stroke: var(--ia-accent); }
+.rag-receipt { fill: var(--ia-card); stroke: var(--ia-line); stroke-width: 1; }
