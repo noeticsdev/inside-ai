@@ -111,16 +111,43 @@ test("the Kafka message names the sensor, the object, its box and entry/exit", (
   expect(msg["@timestamp"]).toBe("2026-11-04T18:00:00.833Z");
 });
 
-test("every mission checks a real answer and rejects a wrong one", () => {
+test("every step task checks a real answer and rejects the common wrong one", () => {
   const m = Object.fromEntries(M.MISSIONS.map((x) => [x.id, x.check]));
-  expect(m.bytes({ frame: 3110400, tensor: 25067520 })).toBe(true);
-  expect(m.bytes({ frame: 6220800, tensor: 25067520 })).toBe(false); // RGB-style 3 bytes/pixel guess
-  expect(m.bottleneck({ choice: "sm" })).toBe(true);
-  expect(m.bottleneck({ choice: "nvdec" })).toBe(false);
+  expect(M.MISSIONS.length).toBe(11);
+  expect(m.timestamp({ timestamp: 1803000 })).toBe(true);
+  expect(m.timestamp({ timestamp: 1800033 })).toBe(false); // counted milliseconds
+  expect(m["nal-order"]({ order: [7, 8, 5] })).toBe(true);
+  expect(m["nal-order"]({ order: [5, 7, 8] })).toBe(false);
+  expect(m.bytes({ frame: 3110400 })).toBe(true);
+  expect(m.bytes({ frame: 6220800 })).toBe(false); // RGB at 3 bytes per pixel
+  expect(m.mux({ choice: "partial" })).toBe(true);
+  expect(m.mux({ choice: "wait" })).toBe(false);
+  expect(m.tensor({ tensor: 25067520 })).toBe(true);
+  expect(m.tensor({ tensor: 12533760 })).toBe(false); // forgot FP16 is 2 bytes
   expect(m.nms({ preClusterThreshold: 0.5, nmsIouThreshold: 0.5 })).toBe(true);
   expect(m.nms({ preClusterThreshold: 0.5, nmsIouThreshold: 0.3 })).toBe(false);
   expect(m.interval({ interval: 3 })).toBe(true);
   expect(m.interval({ interval: 4 })).toBe(false);
+  expect(m.crossing({ passed: true })).toBe(true);
+  expect(m["event-time"]({ ms: 833 })).toBe(true);
+  expect(m["event-time"]({ ms: 25 })).toBe(false);
+  expect(m.bottleneck({ choice: "sm" })).toBe(true);
+  expect(m.bottleneck({ choice: "nvdec" })).toBe(false);
+});
+
+test("16 cameras keep up with batch 16 or interval 1, but not at an interval that breaks the tracker", () => {
+  expect(M.keepsUp({ batch: 8, interval: 0 })).toBe(false); // SMs at 104.4%
+  expect(M.keepsUp({ batch: 16, interval: 0 })).toBe(true);
+  expect(M.keepsUp({ batch: 8, interval: 1 })).toBe(true);
+  expect(M.keepsUp({ batch: 4, interval: 4 })).toBe(false); // interval 4 switches IDs
+  expect(M.pipeLoad({ cameras: 16, batch: 16, interval: 0 }).resources.find((r) => r.id === "sm").load).toBe(89.4);
+});
+
+test("the answers the steps rely on", () => {
+  expect(M.ANSWERS.frame1Timestamp).toBe(1803000);
+  expect(M.ANSWERS.eventMs).toBe(833);
+  expect(M.FIRST_CROSSING.frame).toBe(25);
+  expect(M.NAL_ORDER).toEqual(M.framePackets(0).nals.map((n) => n.type));
 });
 
 test("the model is deterministic", () => {

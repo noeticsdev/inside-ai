@@ -1,8 +1,11 @@
 // Lesson copy for "Inside a video-analytics pipeline". Every number quoted here is asserted in model.test.mjs.
 export default {
   slug: "deepstream",
-  title: "Inside a video-analytics pipeline",
-  hook: "Follow one camera frame from network packet to Kafka event.",
+  title: "Build a video-analytics pipeline",
+  short: "Video-analytics pipeline",
+  subtitle: "DeepStream · 9 elements · 16 cameras on one GPU",
+  layout: "guide",
+  hook: "Assemble a DeepStream car counter element by element, from RTP packets to Kafka events, then make it keep up with 16 cameras.",
   level: "advanced",
   minutes: 25,
   order: 9,

@@ -101,9 +101,8 @@ export function createIA({ M, data, root = document }) {
   let loader = null;
   const list = $("[data-ia-missions]");
   function renderMissions() {
-    if (!list) return;
-    list.textContent = "";
-    missions.forEach((m, i) => {
+    if (list) list.textContent = "";
+    if (list) missions.forEach((m, i) => {
       const done = Boolean(mine.missions[m.id]);
       const li = el("li", { class: "ia-mission", "data-done": String(done), "data-id": m.id });
       const head = el("div", { class: "ia-mission-head" });
@@ -179,10 +178,10 @@ export function createIA({ M, data, root = document }) {
       p.append("You predicted: ", el("strong", {}, chosen));
       predictBox.append(p);
       if (mine.predict.revealed) {
-        const verdict = el("p", { class: "ia-verdict", "data-ok": String(mine.predict.correct) }, mine.predict.correct ? "The machine agrees." : `The machine shows: ${pre.options[pre.correct]}`);
+        const verdict = el("p", { class: "ia-verdict", "data-ok": String(mine.predict.correct) }, mine.predict.correct ? (data.words?.right || "The machine agrees.") : `${data.words?.shows || "The machine shows"}: ${pre.options[pre.correct]}`);
         predictBox.append(verdict, el("p", { class: "ia-explain" }, pre.explanation));
       } else {
-        predictBox.append(el("p", { class: "ia-muted" }, "Run the machine to find out."));
+        predictBox.append(el("p", { class: "ia-muted" }, data.words?.later || "Run the machine to find out."));
       }
       return;
     }
@@ -199,7 +198,7 @@ export function createIA({ M, data, root = document }) {
       });
       opts.append(b);
     });
-    const skip = el("button", { type: "button", class: "ia-link" }, "Skip and just play");
+    const skip = el("button", { type: "button", class: "ia-link" }, data.words?.skip || "Skip and just play");
     skip.addEventListener("click", () => {
       predictBox.dataset.skipped = "true";
       predictBox.hidden = true;
@@ -304,14 +303,14 @@ export function createIA({ M, data, root = document }) {
   if (mine.missions && Object.keys(mine.missions).length && predictBox && !mine.predict) predictBox.hidden = true;
 
   // Lessons mark reasoning missions done directly (answers checked by the page against the model).
-  function complete(id) {
+  function complete(id, { quiet = false } = {}) {
     if (mine.missions[id]) return false;
     mine.missions[id] = Date.now();
     send("mission", { id });
     save();
     renderMissions();
     const m = missions.find((x) => x.id === id);
-    toast("Mission complete", m ? m.title : id);
+    if (!quiet) toast("Mission complete", m ? m.title : id);
     revealPrediction();
     return true;
   }

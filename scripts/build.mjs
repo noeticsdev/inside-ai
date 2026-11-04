@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { machinePage } from "../platform/shell/page.mjs";
 import { lessonPage } from "../platform/shell/lesson.mjs";
+import { guidePage } from "../platform/shell/guide.mjs";
 import * as kit from "../kit/iso-kit.mjs";
 import * as inkKit from "../kit/ink.mjs";
 
@@ -167,7 +168,8 @@ for (const [i, m] of machines.entries()) {
     if (m.lesson) {
       const js = await bundleLesson(m, data);
       const css = existsSync(join(m.dir, "page.css")) ? readFileSync(join(m.dir, "page.css"), "utf8") : "";
-      html = lessonPage({ content: m.content, bundle: js, css, next: nextEntry, index: i + 1, missions: m.missions });
+      const page = m.content.layout === "guide" ? guidePage : lessonPage;
+      html = page({ content: m.content, bundle: js, css, next: nextEntry, index: i + 1, missions: m.missions });
       const thumb = join(m.dir, "figure.svg");
       if (existsSync(thumb)) cpSync(thumb, join(dir, "figure.svg"));
     } else {

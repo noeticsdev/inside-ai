@@ -313,37 +313,35 @@ export function eventMessage(crossing, f = crossing.frame) {
   };
 }
 
-// ---------- missions: each needs reasoning, and each has a checkable answer ----------
+// ---------- step tasks: each needs reasoning, and each has a checkable answer ----------
+export const NAL_ORDER = [7, 8, 5]; // SPS, PPS, IDR slice: what the decoder needs, in order, for a key frame
+export const MUX = { batchedPushTimeoutUs: 40000, lateMs: 60 }; // cam-05's frame arrives 60 ms late
+export const FIRST_CROSSING = track(0).crossings[0];
+export const eventMillis = (f, fps = CAMERA.fps) => Math.round(((f % fps) * 1000) / fps);
+
 export const ANSWERS = {
+  frame1Timestamp: framePackets(1).timestamp, // 1,803,000
   nv12Frame: nv12Bytes(1920, 1080), // 3,110,400
+  muxChoice: "partial", // push the 7 frames it has after 40 ms
   batchTensor: tensorBytes(8, 3, 544, 960, 2), // 25,067,520
-  bottleneck16: pipeLoad({ cameras: 16, batch: 8, interval: 0, nvmm: true }).bottleneck,
   maxSafeInterval: [0, 1, 2, 3, 4].filter((k) => track(k).idSwitches === 0).pop(),
+  eventMs: eventMillis(FIRST_CROSSING.frame), // 833
+  bottleneck16: pipeLoad({ cameras: 16, batch: 8, interval: 0, nvmm: true }).bottleneck,
 };
 
+const near = (v, want) => Number.isFinite(v) && Math.abs(v - want) <= want * 0.005;
+export const keepsUp = (c) => pipeLoad({ cameras: 16, batch: c.batch, interval: c.interval, nvmm: true }).bottleneck === null && c.interval <= ANSWERS.maxSafeInterval;
+
 export const MISSIONS = [
-  {
-    id: "bytes",
-    title: "Size the data",
-    goal: "Work out how many bytes one decoded 1080p NV12 frame takes in GPU memory, and how many bytes one batch tensor of 8 frames at 960x544 FP16 takes.",
-    check: (a) => Math.abs(a.frame - ANSWERS.nv12Frame) <= ANSWERS.nv12Frame * 0.01 && Math.abs(a.tensor - ANSWERS.batchTensor) <= ANSWERS.batchTensor * 0.01,
-  },
-  {
-    id: "bottleneck",
-    title: "Find the bottleneck",
-    goal: "16 cameras at 30 fps, batch 8, inference on every frame. Predict which part runs out first, then set it on the anatomy and check.",
-    check: (a) => a.choice === ANSWERS.bottleneck16,
-  },
-  {
-    id: "nms",
-    title: "Tune the detector",
-    goal: "On frame 30, set the confidence threshold and the NMS IoU threshold so the output has one box per real object: no duplicates, no false positives, no misses.",
-    check: (a) => scoreDetections(30, a).exact,
-  },
-  {
-    id: "interval",
-    title: "Skip frames safely",
-    goal: "The IOU tracker keeps a track's last box on skipped frames. Predict the largest inference interval that causes zero ID switches, then verify it.",
-    check: (a) => a.interval === ANSWERS.maxSafeInterval,
-  },
+  { id: "timestamp", title: "Stamp frame 1", goal: "Work out the RTP timestamp on frame 1's packets from the 90 kHz clock.", check: (a) => a.timestamp === ANSWERS.frame1Timestamp },
+  { id: "nal-order", title: "Order the NAL units", goal: "Hand the decoder a key frame's NAL units in the order it needs them.", check: (a) => Array.isArray(a.order) && a.order.join() === NAL_ORDER.join() },
+  { id: "bytes", title: "Size the decoded frame", goal: "Work out the bytes of one decoded 1080p NV12 frame in GPU memory.", check: (a) => near(a.frame, ANSWERS.nv12Frame) },
+  { id: "mux", title: "Handle a late camera", goal: "Say what nvstreammux does when one camera's frame is later than batched-push-timeout.", check: (a) => a.choice === ANSWERS.muxChoice },
+  { id: "tensor", title: "Size the batch tensor", goal: "Work out the bytes of the 8 × 3 × 544 × 960 FP16 input tensor.", check: (a) => near(a.tensor, ANSWERS.batchTensor) },
+  { id: "nms", title: "Tune the detector", goal: "Set the confidence and NMS thresholds so frame 30 has one box per real object.", check: (a) => scoreDetections(30, a).exact },
+  { id: "interval", title: "Skip frames safely", goal: "Predict the largest inference interval that keeps every track ID.", check: (a) => a.interval === ANSWERS.maxSafeInterval },
+  { id: "crossing", title: "Write the counting rule", goal: "Write the line-crossing test nvdsanalytics applies to each track.", check: (a) => a.passed === true },
+  { id: "event-time", title: "Timestamp the event", goal: "Turn the crossing's frame number into the event's milliseconds.", check: (a) => a.ms === ANSWERS.eventMs },
+  { id: "bottleneck", title: "Find the bottleneck", goal: "Predict which part runs out first at 16 cameras, batch 8, interval 0.", check: (a) => a.choice === ANSWERS.bottleneck16 },
+  { id: "keep-up", title: "Make 16 cameras keep up", goal: "Get every part under 100% without breaking the tracker.", check: (a) => keepsUp(a) },
 ];
