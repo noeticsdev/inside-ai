@@ -1,0 +1,48 @@
+/* Real data and caller paths. All strokes are crisp; nothing wobbles or autoplays. */
+.al-panel { fill: var(--ia-page); stroke: var(--ia-line); stroke-width: 1; }
+.al-panel.al-fresh { stroke: var(--ia-accent); fill: var(--ia-accent-soft); }
+.al-node rect { fill: var(--ia-card); stroke: var(--ia-strong); stroke-width: 1; }
+.al-node.is-new rect { fill: var(--ia-accent-soft); stroke: var(--ia-accent); }
+.al-node.is-new .al-label { fill: var(--ia-accent); }
+.al-title { font-size: 17px; font-weight: 700; fill: var(--ia-strong); letter-spacing: .08em; }
+.al-label { font-size: 16px; font-weight: 700; fill: var(--ia-strong); }
+.al-muted, .al-message-text { font-size: 15px; fill: var(--ia-muted); }
+.al-message-text { fill: var(--ia-strong); font-size: 14px; }
+.al-small { font-size: 14px; fill: var(--ia-muted); letter-spacing: .045em; }
+.al-value { font-size: 14px; font-weight: 700; fill: var(--ia-accent); }
+.al-role { font-size: 14px; fill: var(--ia-accent); font-weight: 700; }
+.al-message { fill: var(--ia-card); stroke: var(--ia-line); stroke-width: 1; }
+.al-message.is-last { fill: var(--ia-accent-soft); stroke: var(--ia-accent); }
+.al-message.is-error { fill: var(--ia-bad-soft); stroke: var(--ia-bad); }
+.al-route { stroke: var(--ia-muted); stroke-width: 1; fill: none; }
+.al-arrow { stroke: var(--ia-muted); stroke-width: 1; fill: none; }
+.al-json { font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 250px; overflow-y: auto; }
+.al-table { font-size: 13px; }
+.al-table td { white-space: normal; vertical-align: top; padding: 6px 8px; }
+.al-table th { font-size: 12px; letter-spacing: 0; }
+.gd-board svg * { vector-effect: non-scaling-stroke; }
+.gd-board svg { max-height: none !important; }
+.al-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.al-pair > div { min-width: 0; }
+.al-close-label { display: block; margin-bottom: 8px; color: var(--ia-accent); font: 600 12px var(--ia-mono); }
+.al-pair .al-json { max-height: none; }
+.al-token-bars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.al-token-block { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--ia-accent); border-radius: 4px; background: var(--ia-accent-soft); font: 13px var(--ia-mono); }
+.al-cost-chart { display: grid; gap: 6px; font: 13px var(--ia-mono); }
+.al-cost-row { display: grid; grid-template-columns: 60px minmax(0, 1fr) 48px; align-items: center; gap: 8px; }
+.al-cost-track { height: 15px; background: var(--ia-card); border: 1px solid var(--ia-line); }
+.al-cost-bar { display: block; height: 100%; background: var(--ia-accent); }
+.gd-config pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.gd-close-head { flex-wrap: wrap; }
+.gd-select { max-width: 100%; }
+.gd-choice, .gd-chip { min-height: 44px; }
+@media (max-width: 900px) {
+  .al-pair { grid-template-columns: 1fr; gap: 14px; }
+  .al-token-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gd-board svg { min-width: 900px; }
+  .gd-board::after { content: 'Swipe the board to follow the caller →'; display: block; padding: 8px 4px; color: var(--ia-muted); font: 12px var(--ia-mono); }
+  .gd-close-body { overflow-wrap: anywhere; }
+  .gd-part-name { overflow-wrap: anywhere; }
+  .al-table { min-width: 0; }
+  .gd-bench .pc-cell { min-width: 0; }
+}
