@@ -147,6 +147,9 @@ for (const slug of slugs) {
       const overflow = await page.eval("document.documentElement.scrollWidth - document.documentElement.clientWidth");
       if (overflow > 1) problems.push(`phone ${theme}: horizontal scroll of ${overflow}px`);
       if (SHOTS) await page.shot(join(outDir, `phone-${theme}.png`));
+      await page.eval("window.__machine.finish()");
+      await Bun.sleep(200);
+      if (SHOTS) await page.shot(join(outDir, `phone-${theme}-finished.png`));
     }
     problems.push(...page.errors.map((e) => `console: ${e}`));
   } catch (error) {
