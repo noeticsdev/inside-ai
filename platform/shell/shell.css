@@ -82,6 +82,7 @@ h1, h2, h3 { color: var(--ia-strong); line-height: 1.2; }
 .ia-field, .ia-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 4px; color: var(--ia-text); font-size: 14px; }
 .ia-toggle input { width: 18px; height: 18px; accent-color: var(--ia-accent); }
 .ia-range { accent-color: var(--ia-accent); width: 140px; }
+.ia-note { flex-basis: 100%; margin: -2px 0 0; font-size: 12px; line-height: 1.4; color: var(--ia-muted); }
 .ia-stage { position: relative; min-height: 0; outline: none; }
 .ia-stage > svg { position: absolute; inset: 4px 12px; width: calc(100% - 24px); height: calc(100% - 8px); }
 .ia-stage-tools { position: absolute; right: 12px; top: 8px; display: flex; gap: 6px; }
