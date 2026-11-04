@@ -32,7 +32,9 @@ function stepSnaps(sim) {
     const lo = Math.min(...logits), hi = Math.max(...logits);
     const barV = h.bars.map((b) => barH(b.logit, lo, hi));
     const edges = [D.TROUGH.x0];
-    for (const slot of g.slots) edges.push(edges[edges.length - 1] + Math.max(0, slot.prob) * D.TROUGH.w);
+    // Widths show the temperature distribution before filtering, so excluded
+    // bins remain visible beneath their closed shutters.
+    for (const prob of M.softmax(logits, sim.config.temperature)) edges.push(edges[edges.length - 1] + prob * D.TROUGH.w);
     edges[edges.length - 1] = D.TROUGH.x0 + D.TROUGH.w;
     const mask = g.slots.map((slot) => (slot.prob <= 0 ? 1 : 0));
     const tx = (edges[d.chosen] + edges[d.chosen + 1]) / 2;
@@ -226,17 +228,18 @@ function shutterSvg(pose, ex) {
   let out = "";
   for (let i = 0; i < n; i++) {
     const xa = edges[i] + ex[0], xb = edges[i + 1] + ex[0];
-    if (xb - xa < 0.4) continue;
+    if (xb - xa < 0.01) continue;
     const slide = (pose.shutMask[i] || 0) * pose.shutT;
     const z = D.SHUT.open - slide * (D.SHUT.open - 3.2) + ex[2];
     const y0 = D.SHUT.y + ex[1], y1 = D.SHUT.y + D.SHUT.d + ex[1];
-    out += ink2slab(xa + 0.3, y0, z, xb - 0.3, y1, z + D.SHUT.h);
+    const inset = Math.min(0.3, (xb - xa) * 0.1);
+    out += ink2slab(xa + inset, y0, z, xb - inset, y1, z + D.SHUT.h);
     if (xb - xa > 1.6) out += `<path class="iso-line shut-hatch" data-tone="mid" d="${K.lineOnTop([xa + 0.5 + ex[0] * 0, y0], [xb - 0.5, y1], z + D.SHUT.h, D.P)}"/>`;
   }
   return out;
 }
 function ink2slab(x0, y0, z0, x1, y1, z1) {
-  return Ink.inkSolid(K.slabOf({ x: x0, y: y0, w: Math.max(0.2, x1 - x0), d: y1 - y0, r: 0 }, z0, z1 - z0, D.P, 1), { tone: "mid" });
+  return Ink.inkSolid(K.slabOf({ x: x0, y: y0, w: Math.max(0.001, x1 - x0), d: y1 - y0, r: 0 }, z0, z1 - z0, D.P, 1), { tone: "mid" });
 }
 
 let lastOrder = "";
@@ -251,7 +254,11 @@ function draw() {
   for (let i = 0; i < 12; i++) {
     const on = i < pose.barN;
     live(`bar${i}`).style.display = on ? "" : "none";
-    if (on) T[`bar${i}`] = add(T[`bar${i}`], [0, 0, pose.barV[i] - 20]);
+    if (on) {
+      const [, baseY] = K.iso([barX(i), D.TOWER.y, 0], D.P);
+      const scale = pose.barV[i] / D.TOWER.h;
+      live(`bar${i}`).setAttribute("transform", `translate(0 ${baseY * (1 - scale)}) scale(1 ${scale})`);
+    }
   }
   for (let i = 0; i < 13; i++) {
     const on = i <= pose.divN;
@@ -281,7 +288,7 @@ function draw() {
   }
 
   const railEx = T["rail-beam"] || [0, 0, 0];
-  const shutters = shutterSvg(pose, railEx);
+  const shutters = shutterSvg(pose, [0, 0, 0]);
   if (live("shutters")._s !== shutters) {
     live("shutters").innerHTML = shutters;
     live("shutters")._s = shutters;
@@ -312,43 +319,6 @@ function currentStep() {
 function drawTexts(railEx, T) {
   const pose = state.pose;
   const g = state.snaps.length ? state.snaps[currentStep()].gate : null;
-  // bin labels: widest bins first, keep 30px clear
-  let html = "";
-  if (g) {
-    const order = g.slots.map((s, i) => i).sort((a, b2) => g.slots[b2].prob - g.slots[a].prob);
-    const placed = [];
-    for (const i of order) {
-      const w = pose.divX[i + 1] - pose.divX[i];
-      if (w < 8 || g.slots[i].prob <= 0) continue;
-      const cx = (pose.divX[i] + pose.divX[i + 1]) / 2 + railEx[0];
-      const [sx, sy] = K.iso([cx, 12 + railEx[1], 2.4 + railEx[2]], D.P);
-      if (placed.some((p) => Math.abs(p - sx) < 34)) continue;
-      placed.push(sx);
-      const name = g.slots[i].token.trim().slice(0, 10);
-      const pct = (g.slots[i].prob * 100).toFixed(1);
-      html += `<text class="bin-label" x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" text-anchor="middle">${name}</text>`;
-      html += `<text class="bin-label" x="${sx.toFixed(1)}" y="${(sy + 11).toFixed(1)}" text-anchor="middle">${pct}%</text>`;
-    }
-  }
-  if (live("binlabels")._h !== html) {
-    live("binlabels").innerHTML = html;
-    live("binlabels")._h = html;
-  }
-  // scoreboard top-3
-  const h = state.shown >= 0 ? state.sim.events[state.shown] : null;
-  const heat = state.sim.events.filter((e) => e.type === "heat")[currentStep()];
-  const bkey = heat ? heat.top.map((t) => t.token + t.prob).join("|") : "";
-  if (bkey !== state.boardKey) {
-    state.boardKey = bkey;
-    const sh = state.explode.shares.board.x;
-    const off = mul(D.EXPLODE.board, sh);
-    let bh = "";
-    heat.top.forEach((t, i) => {
-      const [sx, sy] = K.iso([-38 + off[0], -37.4 + off[1], 11 - i * 3 + off[2]], D.P);
-      bh += `<text class="board-text" x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" text-anchor="middle">${i + 1} ${t.token.trim().slice(0, 9)} ${(t.prob * 100).toFixed(1)}%</text>`;
-    });
-    live("board").innerHTML = bh;
-  }
   // flap: last stamped token
   const stamps = state.sim.events.filter((e) => e.type === "stamp");
   const shown = stamps.filter((e) => e.index <= state.shown).at(-1);
@@ -358,7 +328,7 @@ function drawTexts(railEx, T) {
     const sh = state.explode.shares.tape.x;
     const off = mul(D.EXPLODE.tape, sh);
     const [sx, sy] = K.iso([38 + off[0], -37.5 + off[1], 6 + off[2]], D.P);
-    live("flap").innerHTML = `<text class="flap-char" x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" text-anchor="middle">${fkey.trim().slice(0, 10) || "…"}</text>`;
+    live("flap").innerHTML = `<text class="flap-char" x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" text-anchor="middle" textLength="${Math.min(75, Math.max(16, fkey.trim().length * 11))}" lengthAdjust="spacingAndGlyphs">${fkey.trim().slice(0, 10) || "…"}</text>`;
   }
 }
 

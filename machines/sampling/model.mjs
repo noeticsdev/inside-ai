@@ -27,8 +27,12 @@ export const FOLLOW = {
   " dragon": { tokens: [" roared", " slept", "!", ",", " danced", " xyzzy"], logits: [2.8, 1.6, 0.7, -0.3, -1.1, -2.6] },
   " castle": { tokens: [" stood", " gates", "!", ".", " crumbled", " xyzzy"], logits: [2.7, 1.5, 0.6, -0.4, -1.2, -2.7] },
   " girl": { tokens: [" laughed", " ran", "!", ".", " vanished", " xyzzy"], logits: [2.6, 1.4, 0.5, -0.5, -1.3, -2.8] },
+  " and": { tokens: [" then", " slept", " smiled", " left", ".", " xyzzy"], logits: [2.2, 1.6, 1.2, 0.8, 0.2, -2.6] },
+  " then": { tokens: [" slept", " left", " smiled", ".", "!", " xyzzy"], logits: [2.0, 1.5, 1.1, 0.6, 0.1, -2.6] },
 };
-export const DEFAULT_FOLLOW = { tokens: [" and", ".", "!", " then", " softly", " xyzzy"], logits: [2.6, 1.8, 0.9, -0.2, -0.9, -2.4] };
+export const DEFAULT_FOLLOW = { tokens: [".", " and", "!", " then", " softly", " xyzzy"], logits: [2.6, 1.8, 0.9, -0.2, -0.9, -2.4] };
+// "." and "!" end the text, standing in for the end-of-sequence token a real model emits.
+export const END_TOKENS = [".", "!"];
 
 export const DEFAULTS = { prompt: "capital", temperature: 1.0, topK: 0, topP: 1.0, seed: 7, count: 8 };
 export const TOPK_OFF = 0;
@@ -193,6 +197,7 @@ export function simulate(input = {}) {
       text,
       trace: `step ${step + 1}: stamped "${token.trim() || token}", tape reads "…${text.slice(-28)}"`,
     });
+    if (END_TOKENS.includes(token)) break;
   }
 
   const last = draws[draws.length - 1];
@@ -247,7 +252,7 @@ export const MISSIONS = [
     goal: "Make the output deterministic: temperature 0 or top-k 1, then the same text comes out for any seed.",
     hint: "Set Temperature to 0 and press Generate 8. Change the seed and run again: the tape never changes.",
     try: { prompt: "capital", temperature: 0, topK: 0, topP: 1.0, seed: 7, count: 8 },
-    check: (run) => (run.config.temperature === 0 || run.config.topK === 1) && run.totals.tokens === 8,
+    check: (run) => (run.config.temperature === 0 || run.config.topK === 1) && run.config.count === 8,
   },
   {
     id: "break-it",
