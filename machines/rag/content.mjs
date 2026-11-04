@@ -1,0 +1,97 @@
+export default {
+  slug: "rag",
+  title: "Inside a RAG pipeline",
+  hook: "Cut, embed, retrieve, pack, answer — with citations.",
+  level: "core",
+  minutes: 12,
+  order: 6,
+  track: "systems",
+  bigIdea: "A RAG answer is only as good as its retrieval: the right cards, packed inside the budget, or an honest “I don't know”.",
+  machine:
+    "Document sheets ride a guillotine into index cards, a press stamps each card's vector code, a magnet arm pulls the closest cards onto a prompt tray, and that packing decides whether the printer can cite an answer.",
+  stations: [
+    { id: "cutter", concept: "CHUNK", does: "Cuts each sheet into word cards.", fails: "No cards to search." },
+    { id: "press", concept: "EMBED", does: "Stamps each card with its 64-number vector.", fails: "Cards cannot be ranked." },
+    { id: "index", concept: "INDEX", does: "Files every card in the drawers.", fails: "Facts have nowhere to live." },
+    { id: "arm", concept: "RETRIEVE", does: "Pulls the k closest cards to the question.", fails: "Good cards stay buried." },
+    { id: "tray", concept: "BUDGET", does: "Keeps only the cards that fit the token budget.", fails: "Overflow cards fall off." },
+    { id: "printer", concept: "ANSWER", does: "Types the answer with a citation, or says it does not know.", fails: "Guesses print without support." },
+  ],
+  quiz: [
+    {
+      stage: "pre",
+      question: "You set chunk size 6, then ask how many vacation days staff get. What will the machine do?",
+      options: [
+        "Answer with a citation to the leave card",
+        "Quote all six handbook documents",
+        "Say it does not know",
+        "Ask you to raise the token budget",
+      ],
+      correct: 2,
+      explanation: "The leave fact needs 8 words in one card. Cut to 6 words, no card holds it whole, so the printer admits it does not know.",
+    },
+    {
+      stage: "check",
+      question: "Why does the press stamp a 64-number vector onto every card?",
+      options: [
+        "So the arm can rank cards by meaning against the question",
+        "So the drawers can file the cards by document title",
+        "So the printer knows which font to type the answer in",
+        "So the tray gauge can weigh each card in tokens",
+      ],
+      correct: 0,
+      explanation: "You watched the arm pull the highest cosine score first: the vector is what makes ranking by meaning possible.",
+    },
+    {
+      stage: "check",
+      question: "The leave fact needs 8 words in one card and chunk size is 6. Why does retrieval fail?",
+      options: [
+        "Six-word cards are too heavy for the magnet arm",
+        "The budget gauge rounds 6-word cards up to zero",
+        "The press refuses to stamp cards under 8 words",
+        "No card holds the whole fact, so no card can cite it",
+      ],
+      correct: 3,
+      explanation: "The split-fact mission showed it: the words survive across two cards, but the full sentence the answer needs sits on neither.",
+    },
+    {
+      stage: "check",
+      question: "The two-part question needs the leave card and the dinner card. What gets both onto the tray?",
+      options: [
+        "A larger overlap between neighbouring cards",
+        "Setting k to 2 or more, with budget for both cards",
+        "Switching the guardrail off before running",
+        "Cutting smaller cards so more of them fit",
+      ],
+      correct: 1,
+      explanation: "With k = 1 the arm stops after the first card and the second half of the question goes unanswered. You tuned this in the both-halves mission.",
+    },
+    {
+      stage: "post",
+      question: "Two cards pack 89 tokens and you lower the budget to 60. What happens?",
+      options: [
+        "Only the cards that fit stay packed; the rest fall off the tray",
+        "Both cards shrink until they fit inside 60 tokens",
+        "The machine answers from memory instead of the cards",
+        "The extra tokens spill into the next run",
+      ],
+      correct: 0,
+      explanation: "The tray gauge keeps cards while they fit and drops the rest — and without both facts the printer says it does not know.",
+    },
+    {
+      stage: "post",
+      question: "With the guardrail off, what does the unanswerable twins question produce?",
+      options: [
+        "A cited answer assembled from the closest cards",
+        "A refusal plus a suggestion to rewrite the question",
+        "A plausible guess with no citation, marked unsupported",
+        "The same “I don't know” as with the guardrail on",
+      ],
+      correct: 2,
+      explanation: "No card mentions twins, so the fixed script invents twelve weeks of paid leave — printed with no citation, exactly the failure the guardrail blocks.",
+    },
+  ],
+  sources: [{ label: "Lewis et al. 2020: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", url: "https://arxiv.org/abs/2005.11401" }],
+  notes:
+    "Vectors here are a 64-dimension hashed word-count vector, not a learned embedding model. Answers come from a fixed script, and token counts are words × 1.3, an estimate. This is a simulation: times are fixed costs, not measurements.",
+};
