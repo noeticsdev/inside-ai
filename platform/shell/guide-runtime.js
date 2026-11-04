@@ -459,7 +459,8 @@ export function createGuide({ M, steps, board, onBoard, done = {}, phaseNames = 
   function passStep(mission, detail) {
     if (!mission) return;
     if (IA.complete(mission, { quiet: true })) IA.event("control", { name: "step-solved", value: mission, detail });
-    renderStage();
+    // a bench owns its live widgets (a Python cell's results, a playing scrubber): do not remount it on pass
+    if (steps[state.step].view !== "bench") renderStage();
     renderParts();
     if (steps[state.step].mission === mission) currentSolved?.();
     syncNext();
