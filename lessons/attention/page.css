@@ -1,0 +1,30 @@
+/* Only the current operands are drawn, at a readable desktop scale. */
+.at-title { fill:var(--ia-strong); font-size:19px; font-weight:700; }
+.at-sub { fill:var(--ia-muted); font-size:16px; }
+.at-cell { fill:var(--ia-card); stroke:var(--ia-line); stroke-width:1; }
+.at-cell.is-row { fill:var(--ia-accent-soft); }
+.at-cell.is-masked { fill:var(--ia-sunk); }
+.at-value { fill:var(--ia-strong); font-size:17px; }
+.at-matrix.is-fresh .at-cell { stroke:var(--ia-accent); }
+.at-matrix.is-fresh .at-title { fill:var(--ia-accent); }
+.at-arrow { stroke:var(--ia-muted); fill:none; stroke-width:1; }
+.at-readout { fill:var(--ia-page); stroke:var(--ia-line); stroke-width:1; }
+.at-read-value { fill:var(--ia-accent); font-size:19px; font-weight:700; }
+.at-large { fill:var(--ia-accent); font-size:32px; font-weight:700; }
+.at-tab { cursor:pointer; }
+.at-tab rect { fill:var(--ia-page); stroke:var(--ia-line); stroke-width:1; }
+.at-tab.is-active rect, .at-tab:focus rect { fill:var(--ia-accent-soft); stroke:var(--ia-accent); }
+.at-control { display:flex; align-items:center; gap:12px; font:14px var(--ia-mono); color:var(--ia-strong); margin-bottom:8px; }
+.at-token-list { display:flex; gap:8px; flex-wrap:wrap; }
+.at-token-list span { padding:10px 14px; border:1px solid var(--ia-line); border-radius:5px; font:14px var(--ia-mono); }
+.at-token-list .is-focus { color:var(--ia-accent); background:var(--ia-accent-soft); border-color:var(--ia-accent); }
+.at-python-pass { margin:0; padding:12px; border:1px solid var(--ia-ok); border-radius:8px; color:var(--ia-ok); background:var(--ia-ok-soft); font:14px/1.5 var(--ia-sans); }
+.gd-close-head { flex-wrap:wrap; }
+.gd-choice code, .gd-lead code { white-space:normal; overflow-wrap:anywhere; }
+@media (max-width:900px) {
+  .gd-board::before { content:'Swipe to inspect the full operation →'; display:block; width:320px; margin-bottom:10px; color:var(--ia-muted); font:12px var(--ia-mono); }
+  .gd-board svg { min-width:760px; }
+  .gd-close-body svg { min-width:660px; }
+  .gd-bench > svg { min-width:660px; }
+  .gd-bench { overflow-x:auto; }
+}
