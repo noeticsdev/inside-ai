@@ -6,12 +6,12 @@ const types = (run) => run.events.map((event) => event.type).join(" ");
 
 test("the default run prints the exact numbers on the page", () => {
   const run = M.simulate(M.DEFAULTS);
-  expect(types(run)).toBe(`prompt${" heat gate draw stamp".repeat(8)}`);
+  expect(types(run)).toBe(`prompt${" heat gate draw stamp".repeat(5)}`);
   expect(run.totals).toEqual({
-    steps: 33,
-    tokens: 8,
-    text: "The capital of France is Paris traffic. and and and and and",
-    lastToken: " and",
+    steps: 21,
+    tokens: 5,
+    text: "The capital of France is Paris traffic and slept.",
+    lastToken: ".",
     lastProb: 0.5781,
     lastProbPct: 57.8,
     lastBaseProb: 0.5781,
@@ -21,12 +21,9 @@ test("the default run prints the exact numbers on the page", () => {
     draws: [
       { token: " Paris", prob: 0.7312, baseProb: 0.7312 },
       { token: " traffic", prob: 0.019, baseProb: 0.019 },
-      { token: ".", prob: 0.2598, baseProb: 0.2598 },
-      { token: " and", prob: 0.5781, baseProb: 0.5781 },
-      { token: " and", prob: 0.5781, baseProb: 0.5781 },
-      { token: " and", prob: 0.5781, baseProb: 0.5781 },
-      { token: " and", prob: 0.5781, baseProb: 0.5781 },
-      { token: " and", prob: 0.5781, baseProb: 0.5781 },
+      { token: " and", prob: 0.2598, baseProb: 0.2598 },
+      { token: " slept", prob: 0.2379, baseProb: 0.2379 },
+      { token: ".", prob: 0.5781, baseProb: 0.5781 },
     ],
   });
   const first = run.events.find((e) => e.type === "draw");
@@ -48,7 +45,7 @@ test("the peaked prompt gives Paris 73.1% and the flat prompt spreads out", () =
 test("temperature 0 is greedy and seed-proof; top-k 1 is deterministic too", () => {
   const a = M.simulate({ prompt: "capital", temperature: 0, count: 8, seed: 7 });
   const b = M.simulate({ prompt: "capital", temperature: 0, count: 8, seed: 99 });
-  expect(a.totals.text).toBe("The capital of France is Paris! and and and and and and");
+  expect(a.totals.text).toBe("The capital of France is Paris!");
   expect(b.totals.text).toBe(a.totals.text);
   expect(a.events.find((e) => e.type === "heat").entropy).toBe(0);
   const c = M.simulate({ prompt: "story", topK: 1, count: 8, seed: 3 });
@@ -91,8 +88,10 @@ test("the same seed gives the same output, every control grid point", () => {
     });
     const gates = run.events.filter((e) => e.type === "gate");
     const draws = run.events.filter((e) => e.type === "draw");
-    expect(gates.length).toBe(run.config.count);
-    expect(draws.length).toBe(run.config.count);
+    // Generation stops early when an end token ("." or "!") is drawn.
+    expect(gates.length).toBe(draws.length);
+    expect(draws.length).toBeLessThanOrEqual(run.config.count);
+    if (draws.length < run.config.count) expect(M.END_TOKENS).toContain(draws.at(-1).token);
     for (const g of gates) {
       // kept[].prob is rounded to 4 decimals for display, so allow that error
       const mass = g.kept.reduce((a, k) => a + k.prob, 0);
@@ -151,4 +150,11 @@ test("the quiz has 6 items in pre, check x3, post x2 order", () => {
     const lengths = q.options.map((o) => o.length);
     expect(Math.max(...lengths) - Math.min(...lengths)).toBeLessThan(40);
   }
+});
+
+test("an end token stops the text instead of looping", () => {
+  const greedy = M.simulate({ prompt: "capital", temperature: 0, count: 8 });
+  expect(greedy.totals.text).toBe("The capital of France is Paris!");
+  expect(greedy.totals.tokens).toBe(2);
+  for (let seed = 1; seed <= 20; seed++) expect(M.simulate({ ...M.DEFAULTS, seed }).totals.text).not.toContain(" and and");
 });

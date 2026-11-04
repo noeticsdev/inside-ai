@@ -29,7 +29,7 @@ export function figure() {
   const LABELS = [
     { asm: "logits", at: [-71, -30, 27], dx: -46, dy: -58 },
     { asm: "heat", at: [-64, 14, 7], dx: -64, dy: 26 },
-    { asm: "gate", at: [-30, 8, 15], dx: -72, dy: -34 },
+    { asm: "gate", at: [-30, 8, 15], dx: -14, dy: -72 },
     { asm: "draw", at: [4, -22, 36], dx: 66, dy: -52 },
     { asm: "tape", at: [64, -26, 17], dx: 62, dy: -30 },
   ];
@@ -56,9 +56,8 @@ export function figure() {
   const screws = [[-78, -36], [74, -36], [-78, 28], [74, 28]]
     .map(([sx, sy]) => S(k.cylinder(sx, sy, 0.55, 0, 0.5, P, 16), { tone: "hi" }) + k.lineSvg(k.ring(sx, sy, 0.55, 0.5, P, 16), { tone: "lo" })).join("");
   put("screws", "base", [0, 0, -40], screws, -400);
-  const plateWords = k.faceTextSvg(k.topMatrix([-16, 30.5], 0.65, P, "x"), "NEXT-TOKEN SAMPLER", { size: 2.6, tone: "lo" });
   const plateRules = [1.6, 2.6, 3.6].map((dz) => k.lineOnTop([-14, 30.5 + dz], [14, 30.5 + dz], 0.6, P)).join("");
-  put("plate", "base", [0, 32, 0], box(-18, 29.5, 0, 18, 35.5, 0.6, { tone: "hi" }, 0.3) + plateWords + k.lineSvg(plateRules, { tone: "faint" }), -300);
+  put("plate", "base", [0, 32, 0], box(-18, 29.5, 0, 18, 35.5, 0.6, { tone: "hi" }, 0.3) + k.lineSvg(plateRules, { tone: "faint" }), -300);
   let rulerTicks = "";
   for (let rx = 26; rx <= 78; rx += 2) rulerTicks += k.lineOnTop([rx, 33.5], [rx, 33.5 + (rx % 10 === 0 ? 2.4 : 1.2)], 0.1, P);
   put("ruler", "base", [52, 34, 0], box(24, 32.5, 0, 80, 36, 0.25, { tone: "lo" }, 0.2) + k.lineSvg(rulerTicks, { tone: "mid" }), -300);
@@ -135,7 +134,7 @@ export function figure() {
     ink.silhouetteSvg(corners3([-42, 7.4, SHUT.open, 50, 9.6, 14.5]), P), 16);
   put("rail-lamp", "gate", [-41, 8.5, 15],
     S(k.cylinder(-41, 8.5, 0.9, 14.5, 1.2, P, 16), { tone: "lo" }) + `<g data-live="lamp-gate">${k.lineSvg(k.ring(-41, 8.5, 0.55, 15.7, P, 16), { tone: "hi" })}</g>`, 17);
-  put("shutters", "rail", [4, 8, 9], `<g data-live="shutters"></g>`, 15);
+  put("shutters", "rail", [4, 8, 9], `<g data-live="shutters"></g>`, 100);
 
   // ---- ball (sphere at origin, translated live) ----
   put("ball", "ball", [4, -10, 18], `<g data-live="ball">${k.solidSvg(L.sphereOf([0, 0, 0], 1.7, P), { lit: true })}</g>`, 20);
@@ -209,7 +208,7 @@ export function figure() {
   const css = `
 [data-ia-stage] .bin-label { font-size: 10px; fill: currentColor; paint-order: stroke; stroke-width: 3px; stroke: transparent; }
 [data-ia-stage] .board-text { font-size: 10.5px; fill: currentColor; font-variant-numeric: tabular-nums; }
-[data-ia-stage] .flap-char { font-size: 15px; font-weight: 700; fill: currentColor; }
+[data-ia-stage] .flap-char { font-size: 19px; font-weight: 700; fill: currentColor; }
 [data-ia-stage] .shut-hatch { stroke-width: 1; opacity: 0.55; }`;
   const topkOptions = [`<option value="0">off</option>`, ...Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`)].join("");
   const controls = `
