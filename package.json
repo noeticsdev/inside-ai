@@ -1,0 +1,10 @@
+{
+  "name": "inside-ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.mjs",
+    "verify": "bun scripts/verify.mjs",
+    "test": "bun test"
+  }
+}
