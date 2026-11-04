@@ -124,3 +124,8 @@ test("the quiz has 6 items in pre, check x3, post x2 order", () => {
   }
   expect(positions.size).toBeGreaterThanOrEqual(3);
 });
+
+test("the static figure has no NaN coordinates", async () => {
+  const { figure } = await import("./figure.mjs");
+  expect(figure().svg).not.toContain("NaN");
+});

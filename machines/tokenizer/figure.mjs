@@ -75,7 +75,7 @@ export function figure() {
   put("lip", "stick", [0, 18.8, 3], box(-68, 18, 2.5, 68, 19.6, 4.2, { tone: "lo" }, 0.4));
   put("stopL", "stick", [-69, 13, 3.5], box(-71, 6, 0, -67.6, 19.6, 7, {}, 0.6), 1);
   put("stopR", "stick", [69, 13, 3.5], box(67.6, 6, 0, 71, 19.6, 7, {}, 0.6), 1);
-  put("stopdots", "stick", [0, 13, 7], Dots([[[-69.3, 9.5, 7]], [[-69.3, 16.5, 7]], [[69.3, 9.5, 7]], [[69.3, 16.5, 7]]]), 1.2);
+  put("stopdots", "stick", [0, 13, 7], Dots([[-69.3, 9.5, 7], [-69.3, 16.5, 7], [69.3, 9.5, 7], [69.3, 16.5, 7]]), 1.2);
   // empty hook the live script fills with the current row of sorts
   put("sortrow", "stick", [0, 11, 5], `<g data-live="sortrow"></g>`, 8);
 
