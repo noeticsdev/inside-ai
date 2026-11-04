@@ -2,7 +2,7 @@
 //
 // Training: start from single characters (code points; production GPT-2 starts
 // from UTF-8 bytes, same idea one level down). Count adjacent pairs inside
-// words only: like GPT-2, text is pre-split on spaces, so no merge ever
+// words only: text is pre-split on spaces (GPT-2 pre-splits too, but keeps the leading space on the word), so no merge ever
 // crosses a word boundary. Repeat: fuse the most frequent pair everywhere,
 // ties broken lexicographically (deterministic). Encoding applies the learned
 // merges in rank order. Characters never seen in training stay as singletons.

@@ -5,7 +5,7 @@ export default {
  stations:[
  {id:'context',concept:'CONTEXT',does:'Carries the request and each new message.',fails:'The model cannot see earlier results.'},
  {id:'model',concept:'MODEL',does:'Proposes a tool call or an answer.',fails:'No next action is proposed.'},
- {id:'tools',concept:'TOOLS',does:'Runs allowed calls and returns results or errors.',fails:'The next turn receives an error instead of a result.'},
+ {id:'tools',concept:'TOOLS',does:'Runs allowed calls and returns results or errors.',fails:'Without retry this harness stops on the error; many real harnesses pass the error back to the model as the observation.'},
  {id:'guard',concept:'GUARD',does:'Checks limits and blocks the dangerous call.',fails:'A loop or unsafe call can continue.'}],
  quiz:[
  {stage:'pre',question:'After a tool returns a result, what can the next model turn see?',options:['Only the original request','The request and the appended result','Only the tool name','Nothing until a new user request'],correct:1,explanation:'The result car joins the request on the context train before the next turn.'},

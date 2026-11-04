@@ -183,7 +183,7 @@ export const MISSIONS = [
   {
     id: "saturate",
     title: "Saturate it",
-    goal: "Push one weight above 0.95 and see why a saturated head stops learning.",
+    goal: "Push one weight above 0.95 and see why a saturated head barely learns.",
     hint: "Switch √d scaling off and drop the temperature: sharp scores, one winner.",
     try: { focus: 7, head: "A", scale: false, causal: false, temp: 0.5 },
     check: (run) => Math.max(...run.totals.weights) > 0.95,

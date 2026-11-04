@@ -43,7 +43,7 @@ export default {
       question: "What does one drawer of the cabinet hold?",
       options: ["The slowest sort on the stick", "One learned piece, labelled with the pair that made it", "A spare copy of the whole sentence", "The space sorts removed from words"],
       correct: 1,
-      explanation: "Each merge files its new piece — “th”, “ing”, “engine” — into the next drawer, which is why the cabinet grows exactly one drawer per merge.",
+      explanation: "Each merge files its new piece — “he”, “ing”, “engine” — into the next drawer, which is why the cabinet grows exactly one drawer per merge.",
     },
     {
       stage: "post",
@@ -57,7 +57,7 @@ export default {
       question: "No token on this bench ever holds a space. Why?",
       options: ["Spaces are deleted before training", "The press melts spaces down first", "Text is pre-split on spaces, so pairs are only counted inside words", "Spaces are too wide for the sorts"],
       correct: 2,
-      explanation: "Like GPT-2, the bench splits on spaces before counting, so a merge can never reach across a word boundary — every space survives as its own sort.",
+      explanation: "The bench pre-splits text into words before counting, so a merge never reaches across a word boundary and each space stays its own sort. GPT-2 also pre-splits, but it keeps the leading space on the word, so “ the” is one GPT-2 token.",
     },
   ],
   sources: [
@@ -65,5 +65,5 @@ export default {
     { label: "Radford et al. 2019: Language Models are Unsupervised Multitask Learners (GPT-2)", url: "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" },
   ],
   notes:
-    "A tiny honest model: 5 short English paragraphs and 40 merges, starting from characters. Real tokenizers train on billions of words, start from UTF-8 bytes, and hold 50,000–200,000 pieces.",
+    "A tiny honest model: 5 short English paragraphs and 40 merges, starting from characters. Real tokenizers train on billions of words, often start from the 256 UTF-8 bytes, and hold roughly 32,000–256,000 pieces.",
 };

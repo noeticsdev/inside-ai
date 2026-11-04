@@ -356,7 +356,7 @@ export const MISSIONS = [
     id: "split-fact",
     title: "Break it: cards too small",
     goal: "Shrink the chunk size until the leave fact splits and the answer is lost.",
-    hint: "The leave fact needs 8 words in one card. Try chunk size 6.",
+    hint: "The leave fact needs 7 words in one card. Try chunk size 6.",
     try: { question: "leave", chunkSize: 6, overlap: 0, k: 1, budget: 160, guardrail: true },
     check: (run) => run.config.question === "leave" && run.totals.status !== "grounded",
   },
