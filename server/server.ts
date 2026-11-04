@@ -1,0 +1,12 @@
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { openDatabase } from './db';
+import { createApp } from './app';
+const distDir = resolve(process.env.DIST_DIR || 'dist');
+const catalog = JSON.parse(await readFile(resolve(distDir,'catalog.json'),'utf8').catch(() => '[]'));
+if (!catalog.length) console.warn('No catalog entries. Build machines before starting production.');
+const db = await openDatabase();
+const app = createApp({ db, distDir, catalog, getClientIp: request => server.requestIP(request)?.address || 'unknown' });
+const server = Bun.serve({ port: Number(process.env.PORT || 3000), fetch: app.fetch });
+console.log(`Inside AI → ${server.url}`);
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async () => { await server.stop(true); db.close(); process.exit(0); });
