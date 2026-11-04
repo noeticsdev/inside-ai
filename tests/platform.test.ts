@@ -159,3 +159,15 @@ test('concurrent guest upgrades cannot overwrite account credentials',async()=>{
   expect((await request('/api/auth/login',{email:user.email,password:'password123'})).status).toBe(200);
   expect((await db.execute('SELECT COUNT(*) AS n FROM users')).rows[0].n).toBe(1);
 });
+
+test('CSRF accepts an https Origin behind a TLS-terminating proxy and rejects a foreign host',async () => {
+  app=createApp({db,distDir:dir,catalog});
+  const viaProxy = await app.request('http://inside-ai.fly.dev/api/auth/guest',{method:'POST',headers:{'content-type':'application/json',origin:'https://inside-ai.fly.dev',host:'inside-ai.fly.dev'},body:'{}'});
+  expect(viaProxy.status).toBe(200);
+  const forwarded = await app.request('http://10.0.0.5:3000/api/auth/guest',{method:'POST',headers:{'content-type':'application/json',origin:'https://insideai.example','x-forwarded-host':'insideai.example'},body:'{}'});
+  expect(forwarded.status).toBe(200);
+  const foreign = await app.request('http://inside-ai.fly.dev/api/auth/guest',{method:'POST',headers:{'content-type':'application/json',origin:'https://evil.example',host:'inside-ai.fly.dev'},body:'{}'});
+  expect(foreign.status).toBe(403);
+  const garbage = await app.request('http://inside-ai.fly.dev/api/auth/guest',{method:'POST',headers:{'content-type':'application/json',origin:'not a url',host:'inside-ai.fly.dev'},body:'{}'});
+  expect(garbage.status).toBe(403);
+});

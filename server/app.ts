@@ -27,7 +27,11 @@ export function createApp({ db, distDir, catalog, allowMissingOrigin = false, ge
   app.use('/api/*', async (c,next) => {
     if (!['GET','HEAD','OPTIONS'].includes(c.req.method)) {
       const origin = c.req.header('origin');
-      if ((!origin && !allowMissingOrigin) || (origin && origin !== new URL(c.req.url).origin)) return c.json({ error: 'Origin must match this site.' },403);
+      // Compare hosts, not full origins: behind a TLS-terminating proxy the server sees http:// while the browser sends https://.
+      const host = (c.req.header('x-forwarded-host') || c.req.header('host') || new URL(c.req.url).host).split(',')[0].trim().toLowerCase();
+      let originHost = '';
+      try { originHost = origin ? new URL(origin).host.toLowerCase() : ''; } catch { originHost = 'invalid'; }
+      if ((!origin && !allowMissingOrigin) || (origin && originHost !== host)) return c.json({ error: 'Origin must match this site.' },403);
       if (!/^application\/json(?:\s*;|$)/i.test(c.req.header('content-type') || '')) return c.json({ error: 'Send application/json.' },415);
       try { const b = await c.req.json(); if (!object(b)) throw new Error(); c.set('body',b); } catch { return c.json({ error: 'Invalid JSON object.' },400); }
     }
