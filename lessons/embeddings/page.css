@@ -1,0 +1,20 @@
+.emb-cell { font: 14px var(--ia-mono); fill: var(--ia-strong); }
+.emb-point { fill: var(--ia-muted); stroke: var(--ia-page); stroke-width: 1; }
+.emb-point-relevant { fill: var(--ia-accent); stroke: var(--ia-page); stroke-width: 1; }
+.emb-arrow { stroke: var(--ia-accent); stroke-width: 3; fill: none; }
+.emb-arrow-muted { stroke: var(--ia-strong); stroke-width: 2; fill: none; }
+.emb-bar { fill: var(--ia-accent); }
+.emb-bar-muted { fill: var(--ia-line); }
+.emb-lbl { font-size: 13.5px; fill: var(--ia-strong); }
+.emb-q { fill: var(--ia-page); stroke: var(--ia-accent); stroke-width: 2.5; }
+.emb-head { fill: var(--ia-accent); }
+.emb-head-muted { fill: var(--ia-strong); }
+@media (max-width: 900px) {
+  .gd-board::before, .gd-close-body::before {
+    content: "Swipe sideways to explore the figure";
+    display: block;
+    padding: 0 0 6px;
+    font: 12px var(--ia-mono);
+    color: var(--ia-muted);
+  }
+}

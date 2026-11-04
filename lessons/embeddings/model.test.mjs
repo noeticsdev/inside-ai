@@ -1,0 +1,35 @@
+import {test,expect} from 'bun:test';
+import * as M from './model.mjs';
+import content from './content.mjs';
+test('dataset',()=>expect(M.DOCS.length).toBe(12));
+test('dimensions',()=>expect(M.DOCS.every(d=>d.v.length===6)).toBe(true));
+test('dot example',()=>expect(M.ANSWERS.dot).toBe(4));
+test('length example',()=>expect(M.ANSWERS.length).toBe(5));
+test('normalize',()=>expect(M.normalize([3,4,0,0])).toEqual([0.6,0.8,0,0]));
+test('zero normalize',()=>expect(M.normalize([0,0])).toEqual([0,0]));
+test('cosine self',()=>expect(M.cosine([3,4],[3,4])).toBe(1));
+test('cosine zero',()=>expect(M.cosine([0,0],[3,4])).toBe(0));
+test('nearest puppy',()=>expect(M.ANSWERS.nearest).toBe('puppy'));
+test('believable score order and spread',()=>{ const r=M.rank(M.QUERIES.puppy); expect(r.slice(0,3).map(d=>d.id)).toEqual(['puppy','dog','kitten']); expect(r[2].score).toBeGreaterThan(0.70); expect(r[3].score).toBeLessThan(0.55); expect(r.map(d=>Number(d.score.toFixed(3)))).toEqual([0.985,0.902,0.714,0.408,0.100,0.049,0.043,0,0,0,0,0]); });
+test('semantic synonym beats keyword match',()=>{expect(M.rank(M.QUERIES.canine)[0].id).toBe('puppy');expect(M.rank(M.QUERIES.canine,'keyword')[0].id).toBe('dog')});
+test('keyword puppy',()=>expect(M.ANSWERS.keyword).toBe('puppy'));
+test('FP32 size',()=>expect(M.ANSWERS.fp32).toBe(3072000000));
+test('multiply adds',()=>expect(M.ANSWERS.ops).toBe(768000000));
+test('int8 size',()=>expect(M.ANSWERS.int8).toBe(768000000));
+test('threshold exact set',()=>{const t=M.thresholdStats(0.65); expect(t.fp).toBe(0);expect(t.missed).toBe(0)});
+test('ranking deterministic',()=>expect(M.rank(M.QUERIES.puppy)).toEqual(M.rank(M.QUERIES.puppy)));
+test('quiz stages',()=>expect(content.quiz.map(q=>q.stage)).toEqual(['pre','check','check','check','post','post']));
+test('threshold window and slider boundaries',()=>{
+ const w=M.thresholdWindow();
+ expect(Number(w.above.toFixed(3))).toBe(0.408);
+ expect(Number(w.atMost.toFixed(3))).toBe(0.714);
+ expect(M.thresholdStats(0.40).fp).toBe(1);
+ expect(M.thresholdStats(0.41).fp).toBe(0);
+ expect(M.thresholdStats(0.71).missed).toBe(0);
+ expect(M.thresholdStats(0.72).missed).toBe(1);
+});
+test('small index storage',()=>{
+ expect(M.ANSWERS.indexFp32).toBe(288);
+ expect(M.ANSWERS.indexInt8).toBe(72);
+ expect(M.bytes(1, M.SIZE.dims, M.SIZE.fp32)).toBe(3072);
+});
