@@ -1,0 +1,28 @@
+export default {
+  slug: "sampling",
+  title: "Inside next-token sampling",
+  hook: "How a chatbot rolls dice to pick each word.",
+  level: "core",
+  minutes: 10,
+  order: 4,
+  track: "language",
+  bigIdea: "A chatbot turns scores into odds, filters the list, then rolls seeded dice for the next word.",
+  machine: "A ball drops past filter shutters into bins as wide as each token's odds, and where it lands stamps the next word on the tape.",
+  stations: [
+    { id: "logits", concept: "LOGITS", does: "Reads the fixed example scores for the prompt.", fails: "No scores means no draw." },
+    { id: "heat", concept: "TEMPERATURE", does: "Softens the scores into probabilities.", fails: "The spread never changes." },
+    { id: "gate", concept: "FILTERS", does: "Shutters close the bins outside top-k and top-p.", fails: "Junk tokens stay in play." },
+    { id: "draw", concept: "DRAW", does: "A seeded ball drop picks one bin.", fails: "The pick is not repeatable." },
+    { id: "tape", concept: "TAPE", does: "Stamps the token onto the ticker tape.", fails: "The text never grows." },
+  ],
+  quiz: [
+    { stage: "pre", question: "You set temperature to 0 and generate twice with different seeds. What comes out?", options: ["Two different texts", "The same text twice", "An error, seeds must match", "Only the first word, twice"], correct: 1, explanation: "Temperature 0 is greedy: the ball always lands in the strongest bin, so the seed never matters." },
+    { stage: "check", question: "What does the temperature knob change in the machine?", options: ["How wide each bin is before the draw", "How fast the ball falls", "How many balls drop at once", "Which prompt is loaded"], correct: 0, explanation: "Heat re-softens the scores, so you watched the bin walls glide wider or narrower." },
+    { stage: "check", question: "Top-p 0.9 keeps which bins open?", options: ["All bins except the weakest one", "Any nine bins at random", "The fewest top bins whose odds add to 90%", "Only bins above 90% each"], correct: 2, explanation: "The shutters closed everything past the smallest set reaching 90%: 5 bins on the peaked prompt, 10 on the flat one." },
+    { stage: "check", question: "Which setup lets a 0.2% token like “...” win?", options: ["Temperature 0, filters off", "Temperature 1 with top-k 1", "Top-p 0.5 at any heat", "Temperature 2 with the filters off"], correct: 3, explanation: "Full heat flattens the bins toward equal widths, and with the shutters open the junk bins can catch the ball." },
+    { stage: "post", question: "Same top-p 0.9: the peaked prompt keeps 5 bins, the flat one 10. Why?", options: ["The flat prompt has hotter scores", "Five strong bins already hold 90% of the peaked odds", "The seed was luckier on the flat run", "Top-k silently capped the peaked run"], correct: 1, explanation: "Paris alone holds 73% of the peaked odds, so 5 bins reach 90%; the flat odds need 10 bins to add up." },
+    { stage: "post", question: "Seed 7 picks “ Toulouse”. You reset and run seed 7 again. What happens?", options: ["A fresh random token", "The next token in line", "“ Toulouse” again, every time", "Greedy Paris regardless of heat"], correct: 2, explanation: "The draw is a seeded roll: the same seed replays the same ball drop, which is why the tape is repeatable." },
+  ],
+  sources: [{ label: "Holtzman et al. 2019: The Curious Case of Neural Text Degeneration", url: "https://arxiv.org/abs/1904.09751" }],
+  notes: "Hand-set example logits and a tiny bigram table stand in for a real model; the softmax, top-k, top-p and seeded draw are the real arithmetic.",
+};
