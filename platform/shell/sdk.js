@@ -303,9 +303,24 @@ export function createIA({ M, data, root = document }) {
   renderPredict();
   if (mine.missions && Object.keys(mine.missions).length && predictBox && !mine.predict) predictBox.hidden = true;
 
+  // Lessons mark reasoning missions done directly (answers checked by the page against the model).
+  function complete(id) {
+    if (mine.missions[id]) return false;
+    mine.missions[id] = Date.now();
+    send("mission", { id });
+    save();
+    renderMissions();
+    const m = missions.find((x) => x.id === id);
+    toast("Mission complete", m ? m.title : id);
+    revealPrediction();
+    return true;
+  }
+
   return {
     slug,
     ran,
+    complete,
+    isDone: (id) => Boolean(mine.missions[id]),
     trace,
     event: (type, payload) => send(type, payload),
     onLoad: (fn) => (loader = fn),

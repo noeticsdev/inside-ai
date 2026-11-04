@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyCell demo</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./shell.css">
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  .demo-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .demo-top h1 { font-size: 20px; margin: 0; }
+  .demo-toggle { min-height: 40px; padding: 0 14px; border: 1px solid var(--ia-line); border-radius: 8px; background: var(--ia-card); color: var(--ia-strong); cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <div class="demo-top">
+    <h1>PyCell dev demo</h1>
+    <button class="demo-toggle" id="theme" type="button">Toggle theme</button>
+  </div>
+  <p>Two cells share one Python worker. Cell 2 loops forever to test the 6 s timeout.</p>
+  <div id="cell-iou"></div>
+  <div id="cell-loop"></div>
+</main>
+<script type="module">
+  import { mountPyCell } from "./pycell.js";
+
+  const root = document.documentElement;
+  const q = /[?&]theme=(light|dark)/.exec(location.search);
+  root.dataset.theme = q ? q[1] : "light";
+  document.getElementById("theme").addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+  });
+
+  window.__passes = [];
+  window.__cells = {};
+
+  window.__cells.iou = mountPyCell(document.getElementById("cell-iou"), {
+    id: "demo-iou",
+    title: "Write IoU",
+    prompt: "Boxes are [x1, y1, x2, y2]. Return the area of the overlap divided by the area of the union, and 0.0 when the boxes do not touch.",
+    starter: "def iou(a, b):\n    # TODO: compute the overlap first\n    return 0.0\n\nprint('first box:', DATA['boxes'][0])\n",
+    tests: [
+      "check('identical boxes', abs(iou([0,0,10,10],[0,0,10,10]) - 1) < 1e-9, 'expected 1.0')",
+      "check('disjoint boxes', iou([0,0,1,1],[5,5,6,6]) == 0.0, 'expected 0.0')",
+      "check('half overlap', abs(iou([0,0,2,2],[1,0,3,2]) - 1/3) < 1e-9, f'expected 0.3333, got {iou([0,0,2,2],[1,0,3,2]):.4f}')",
+      "check('DATA pair', abs(iou(*DATA['boxes']) - 1/7) < 1e-9, 'expected 1/7 for the two DATA boxes')",
+    ].join("\n"),
+    data: { boxes: [[0, 0, 2, 2], [1, 1, 3, 3]] },
+    solution: "def iou(a, b):\n    ix = max(0, min(a[2], b[2]) - max(a[0], b[0]))\n    iy = max(0, min(a[3], b[3]) - max(a[1], b[1]))\n    inter = ix * iy\n    area = lambda r: (r[2] - r[0]) * (r[3] - r[1])\n    union = area(a) + area(b) - inter\n    return inter / union if union else 0.0\n",
+    onPass: (results) => window.__passes.push({ id: "demo-iou", n: results.length }),
+  });
+
+  window.__cells.loop = mountPyCell(document.getElementById("cell-loop"), {
+    id: "demo-loop",
+    title: "Stop the loop",
+    prompt: "This loop never ends. Run it to see the timeout, then make the function return the sum of 1 through n.",
+    starter: "def total(n):\n    while True:\n        pass\n\nprint(total(10))\n",
+    tests: "check('sum to 10', total(10) == 55, 'expected 55')\ncheck('sum to 0', total(0) == 0, 'expected 0')",
+    onPass: () => window.__passes.push({ id: "demo-loop" }),
+  });
+</script>
+</body>
+</html>

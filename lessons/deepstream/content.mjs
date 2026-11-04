@@ -1,0 +1,69 @@
+// Lesson copy for "Inside a video-analytics pipeline". Every number quoted here is asserted in model.test.mjs.
+export default {
+  slug: "deepstream",
+  title: "Inside a video-analytics pipeline",
+  hook: "Follow one camera frame from network packet to Kafka event.",
+  level: "advanced",
+  minutes: 25,
+  order: 9,
+  track: "systems",
+  bigIdea: "Pixels stay in GPU memory from decode to inference; only small metadata travels on, and every stage has a budget you can compute.",
+  objectives: [
+    "Trace one H.264 frame through RTP packets, NAL units, NVDEC, nvstreammux, nvinfer, nvtracker, nvdsanalytics and nvmsgbroker, and say where each one runs.",
+    "Compute the bytes of a decoded NV12 frame and of a batched FP16 input tensor.",
+    "Find the bottleneck of a multi-camera pipeline from its per-stage costs, and fix it with batch size or inference interval.",
+    "Tune the confidence and NMS IoU thresholds, and predict when skipping inference frames breaks an IoU tracker.",
+  ],
+  quiz: [
+    {
+      stage: "pre",
+      question: "A camera frame has just been decoded on the GPU. In a DeepStream pipeline, where do its pixels go next?",
+      options: ["Copied to system RAM so the CPU can batch them", "They stay in GPU memory; the next elements get a pointer", "Back over the network to a central server", "Re-encoded to JPEG before inference"],
+      correct: 1,
+      explanation: "nvv4l2decoder writes NV12 surfaces into GPU memory (NVMM). nvstreammux, nvinfer and nvtracker work on those surfaces in place; only metadata reaches the CPU.",
+    },
+    {
+      stage: "check",
+      question: "Why is one decoded 1080p NV12 frame 3,110,400 bytes?",
+      options: ["1920 × 1080 pixels × 3 bytes of RGB", "The H.264 access unit is that large", "A full-size Y plane plus a half-height interleaved UV plane: 1.5 bytes per pixel", "Each pixel keeps 12 bytes of metadata"],
+      correct: 2,
+      explanation: "Y is 1920 × 1080 = 2,073,600 bytes. UV is 1920 × 540 = 1,036,800 bytes. The compressed access unit was only 120,000 bytes for an IDR frame.",
+    },
+    {
+      stage: "check",
+      question: "On frame 30, setting the NMS IoU threshold to 0.3 made one person disappear. Why?",
+      options: ["The confidence threshold rose with it", "The tracker deleted that track", "The batch timed out before the frame arrived", "The two walkers overlap at IoU 0.412, so NMS treated one as a duplicate of the other"],
+      correct: 3,
+      explanation: "NMS keeps the highest-confidence box and drops any same-class box that overlaps it by more than the threshold. Two real people at IoU 0.412 are dropped at 0.3 and kept at 0.5.",
+    },
+    {
+      stage: "check",
+      question: "16 cameras at batch 8 put the SMs at 104.4%. Which change keeps all 16 cameras and fixes it?",
+      options: ["Raise the batch size to 16, or set interval=1", "Raise batched-push-timeout", "Lower the camera bitrate", "Convert frames to RGBA before nvinfer"],
+      correct: 0,
+      explanation: "Each nvinfer batch pays a fixed 5 ms plus 1.2 ms per frame. Bigger batches pay the fixed cost less often; interval=1 halves the inferred frames. Both bring the SMs under 100%.",
+    },
+    {
+      stage: "post",
+      question: "An IOU tracker keeps a track's last box on skipped frames and needs IoU ≥ 0.3. A bus 400 px wide moves 50 px per frame. What is the largest safe inference interval?",
+      options: ["1", "2", "3", "4"],
+      correct: 2,
+      explanation: "With interval k the bus moves 50(k+1) px between inferences. IoU = (400 − d)/(400 + d) ≥ 0.3 needs d ≤ 215 px, so k + 1 ≤ 4.3 and k = 3.",
+    },
+    {
+      stage: "post",
+      question: "32 cameras overload NVDEC even at interval 4. Why does skipping inference not help?",
+      options: ["NVDEC also runs the detector", "The tracker decodes the skipped frames again", "Kafka needs every frame", "interval only skips nvinfer; every frame must still be decoded"],
+      correct: 3,
+      explanation: "H.264 P-frames depend on earlier frames, so the decoder must decode every frame. interval only tells nvinfer which decoded frames to skip.",
+    },
+  ],
+  sources: [
+    { label: "NVIDIA DeepStream SDK developer guide (elements and config keys)", url: "https://docs.nvidia.com/metropolis/deepstream/dev-guide/" },
+    { label: "RFC 3550: RTP, a transport protocol for real-time applications", url: "https://www.rfc-editor.org/rfc/rfc3550" },
+    { label: "RFC 6184: RTP payload format for H.264 video (FU-A)", url: "https://www.rfc-editor.org/rfc/rfc6184" },
+    { label: "ITU-T H.264 (NAL unit types)", url: "https://www.itu.int/rec/T-REC-H.264" },
+  ],
+  notes:
+    "This is a simulation of one example GPU with fixed costs, not a measurement: real capacity depends on the GPU, codec, resolution and model. Element names and config keys follow the DeepStream guide. The detector output is scripted; the clustering, IoU tracking and counting are computed. Independent lesson, not affiliated with or endorsed by NVIDIA.",
+};

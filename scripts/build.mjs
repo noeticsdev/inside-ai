@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { machinePage } from "../platform/shell/page.mjs";
+import { lessonPage } from "../platform/shell/lesson.mjs";
 import * as kit from "../kit/iso-kit.mjs";
 import * as inkKit from "../kit/ink.mjs";
 
@@ -25,7 +26,39 @@ function slugs() {
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
     .filter((name) => REQUIRED.every((f) => existsSync(join(MACHINES, name, f))))
-    .filter((name) => (ONLY ? name === ONLY : !name.startsWith("_")));
+    .filter((name) => (ONLY ? name === ONLY : !name.startsWith("_")))
+    .filter((name) => !existsSync(join(ROOT, "lessons", name, "page.js")));
+}
+
+// Lessons: lessons/<slug>/{content.mjs, model.mjs, page.js}. A lesson replaces a machine with the same slug.
+function lessonSlugs() {
+  const dir = join(ROOT, "lessons");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && ["content.mjs", "model.mjs", "page.js"].every((f) => existsSync(join(dir, d.name, f))))
+    .map((d) => d.name)
+    .filter((name) => (ONLY ? name === ONLY : true));
+}
+
+async function loadLesson(slug) {
+  const dir = join(ROOT, "lessons", slug);
+  const bust = `?t=${Date.now()}`;
+  const content = (await import(pathToFileURL(join(dir, "content.mjs")).href + bust)).default;
+  const model = await import(pathToFileURL(join(dir, "model.mjs")).href + bust);
+  if (!Array.isArray(content.quiz) || content.quiz.length !== 6) throw new Error(`${slug}: content.quiz must have 6 items`);
+  const missions = (model.MISSIONS || []).map(({ id, title, goal }) => ({ id, title, goal, hint: "", try: null }));
+  return { slug, dir, content, missions, lesson: true, fig: null };
+}
+
+async function bundleLesson(lesson, data) {
+  mkdirSync(TMP, { recursive: true });
+  const dataFile = join(TMP, `${lesson.slug}-lesson-data.js`);
+  writeFileSync(dataFile, `window.__LESSON__ = ${JSON.stringify(data)};\nwindow.__IA_DATA = window.__LESSON__;\n`);
+  const entry = join(TMP, `${lesson.slug}-lesson-entry.js`);
+  writeFileSync(entry, `import ${JSON.stringify(dataFile)};\nimport ${JSON.stringify(join(lesson.dir, "page.js"))};\n`);
+  const result = await Bun.build({ entrypoints: [entry], format: "esm", minify: { syntax: true, whitespace: true }, target: "browser" });
+  if (!result.success) throw new Error(`${lesson.slug}: bundle failed\n${result.logs.join("\n")}`);
+  return await result.outputs[0].text();
 }
 
 async function loadMachine(slug) {
@@ -83,7 +116,7 @@ function thumbnail(svg, extraCss = "") {
 }
 
 const list = slugs();
-if (!list.length) {
+if (!list.length && !lessonSlugs().length) {
   console.error(ONLY ? `no machine "${ONLY}" with ${REQUIRED.join(", ")}` : "no machines found");
   process.exit(1);
 }
@@ -96,6 +129,14 @@ for (const slug of list) {
     machines.push(await loadMachine(slug));
   } catch (error) {
     console.error(`✗ ${slug}: ${error.stack || error}`);
+    process.exitCode = 1;
+  }
+}
+for (const slug of lessonSlugs()) {
+  try {
+    machines.push(await loadLesson(slug));
+  } catch (error) {
+    console.error(`✗ lesson ${slug}: ${error.stack || error}`);
     process.exitCode = 1;
   }
 }
@@ -120,12 +161,21 @@ for (const [i, m] of machines.entries()) {
   const nextEntry = catalog[i + 1] ? { title: catalog[i + 1].title, href: catalog[i + 1].href } : null;
   const data = { slug: m.slug, title: m.content.title, missions: m.missions, quiz: m.content.quiz, next: nextEntry };
   try {
-    const js = await bundle(m, data);
-    const html = machinePage({ content: m.content, fig: m.fig, bundle: js, next: nextEntry, index: i + 1, missions: m.missions });
     const dir = join(OUT, "m", m.slug);
     mkdirSync(dir, { recursive: true });
+    let html;
+    if (m.lesson) {
+      const js = await bundleLesson(m, data);
+      const css = existsSync(join(m.dir, "page.css")) ? readFileSync(join(m.dir, "page.css"), "utf8") : "";
+      html = lessonPage({ content: m.content, bundle: js, css, next: nextEntry, index: i + 1, missions: m.missions });
+      const thumb = join(m.dir, "figure.svg");
+      if (existsSync(thumb)) cpSync(thumb, join(dir, "figure.svg"));
+    } else {
+      const js = await bundle(m, data);
+      html = machinePage({ content: m.content, fig: m.fig, bundle: js, next: nextEntry, index: i + 1, missions: m.missions });
+      writeFileSync(join(dir, "figure.svg"), thumbnail(m.fig.svg, m.fig.css || ""));
+    }
     writeFileSync(join(dir, "index.html"), html);
-    writeFileSync(join(dir, "figure.svg"), thumbnail(m.fig.svg, m.fig.css || ""));
     console.log(`✓ ${m.slug.padEnd(22)} ${(html.length / 1024).toFixed(0).padStart(5)} KB  ${m.missions.length} missions`);
   } catch (error) {
     console.error(`✗ ${m.slug}: ${error.stack || error}`);
