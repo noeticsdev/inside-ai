@@ -1,0 +1,13 @@
+import {test,expect} from 'bun:test';
+import * as M from './model.mjs';
+import content from './content.mjs';
+const grid=[]; for(const requests of [1,4,12,16]) for(const prompt of M.OPTIONS.prompt) for(const output of M.OPTIONS.output) for(const cache of M.OPTIONS.cache) for(const batching of M.OPTIONS.batching) for(const memory of M.OPTIONS.memory) grid.push({requests,prompt,output,cache,batching,memory});
+test('KV formula uses both keys and values',()=>expect(M.KV_BYTES_PER_TOKEN).toBe(131072));
+test('default exact displayed values',()=>{const t=M.simulate().totals; expect(t.tokens).toBe(160);expect(t.compute).toBe(8352);expect(t.kvPeak).toBe(1094713344);});
+test('cache off recomputes context',()=>{const a=M.simulate(),b=M.simulate({...M.DEFAULTS,cache:false});expect(b.totals.compute).toBeGreaterThan(a.totals.compute*5);expect(b.totals.kvPeak).toBe(0);});
+test('full pool defers requests without exceeding budget',()=>{const t=M.simulate(M.MISSIONS[1].try).totals;expect(t.preemptions).toBeGreaterThan(0);expect(t.kvPeak).toBeLessThanOrEqual(t.budget);});
+test('continuous admits requests into released slots',()=>{const c=M.MISSIONS[2].try;expect(M.simulate(c).totals.throughput).toBeGreaterThan(M.simulate({...c,batching:'static'}).totals.throughput);});
+test('grid is deterministic with monotone event clocks',()=>{for(const c of grid){const r=M.simulate(c);expect(M.simulate(c)).toEqual(r);r.events.forEach((e,i)=>{expect(e.index).toBe(i);expect(e.trace.length).toBeGreaterThan(0);if(i)expect(e.clock).toBeGreaterThanOrEqual(r.events[i-1].clock);});}});
+test('URLs round trip and reject garbage',()=>{for(const c of grid)expect(M.decode('?'+M.encode(c))).toEqual(c);expect(M.decode('?requests=garbage&cache=bad&memory=0')).toEqual(M.DEFAULTS);});
+test('missions pass reachable configurations and default fails some',()=>{for(const m of M.MISSIONS){expect(m.check(M.simulate(m.try))).toBe(true);for(const [k,v] of Object.entries(m.try))expect(M.OPTIONS[k]).toContain(v);}expect(M.MISSIONS.every(m=>m.check(M.simulate()))).toBe(false);});
+test('quiz stages and correct choices are valid',()=>{expect(content.quiz.map(q=>q.stage)).toEqual(['pre','check','check','check','post','post']);for(const q of content.quiz){expect(q.options).toHaveLength(4);expect(q.correct).toBeGreaterThanOrEqual(0);expect(q.correct).toBeLessThan(4);expect(q.explanation.length).toBeGreaterThan(0);}});
