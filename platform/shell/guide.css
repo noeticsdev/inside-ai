@@ -209,6 +209,10 @@
 }
 @media (max-width: 600px) {
   .gd-top .ia-progress { display: none; }
+  .gd-top { gap: 10px; }
+  .gd-top .ia-co-sep, .gd-top .ia-logo > span:last-child, .ia-user-more { display: none; }
+  .gd-name { flex: 1 1 auto; }
+  .gd-name strong { overflow: hidden; text-overflow: ellipsis; }
   .gd-name strong { font-size: 14px; }
   .gd-stats strong { font-size: 17px; }
 }

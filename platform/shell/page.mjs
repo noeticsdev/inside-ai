@@ -12,6 +12,12 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&a
 
 export const LOGO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 21 7v10l-9 5-9-5V7z" fill="var(--ia-accent)"/><path d="M12 12 21 7M12 12v10M12 12 3 7" stroke="var(--ia-page)" stroke-width="1.6" fill="none"/><path d="M12 2 21 7v10l-9 5-9-5V7z" stroke="var(--ia-strong)" stroke-width="1.4" fill="none" stroke-linejoin="round"/></svg>`;
 
+// Company logo. company-logo.png is dark ink for the light theme, company-logo-light.png is white for the dark theme.
+// shell.css shows the one that matches data-theme. 1672 x 284 source, drawn about 15px tall.
+export const NOETICS_LOGO = `<img class="ia-co ia-co-ink" src="/brand/company-logo.png" alt="Noetics" width="88" height="15"><img class="ia-co ia-co-white" src="/brand/company-logo-light.png" alt="Noetics" width="88" height="15">`;
+export const BRAND = `${NOETICS_LOGO}<span class="ia-co-sep" aria-hidden="true"></span><span>Inside AI</span>`;
+export const NOETICS_URL = "https://noetics.dev";
+
 export const THEME_BOOT = `<script>(function(){var a=/[?&]theme=(light|dark)/.exec(location.search),s=null;try{s=localStorage.getItem("ia:theme")}catch(e){}var v=a?a[1]:s||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=v;})();</script>`;
 
 export function head({ title, description }) {
@@ -40,7 +46,7 @@ ${head({ title: `${content.title} · Inside AI`, description })}
 <body class="iso iso-ink">
 <script>document.body.dataset.theme=document.documentElement.dataset.theme;</script>
 <header class="ia-top">
-  <a class="ia-logo" href="/">${LOGO}<span>Inside AI</span></a>
+  <a class="ia-logo" href="/" aria-label="Inside AI by Noetics, home">${BRAND}</a>
   <span class="ia-crumb">/ machines / ${esc(content.slug)}</span>
   <div class="ia-top-right">
     <span class="ia-progress" title="Missions complete"><span class="ia-bar" data-ia-bar></span><span data-ia-count>0/${missions.length}</span></span>

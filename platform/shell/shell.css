@@ -175,3 +175,11 @@ details.ia-card > div { padding: 0 18px 16px; overflow-x: auto; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Company logo in the brand link: one image per theme, kept small. */
+.ia-co { height: 15px; width: auto; display: block; flex: none; }
+.ia-co-white { display: none; }
+:root[data-theme="dark"] .ia-co-ink { display: none; }
+:root[data-theme="dark"] .ia-co-white { display: block; }
+.ia-co-sep { width: 1px; height: 16px; background: var(--ia-line); flex: none; }
+@media (max-width: 560px) { .ia-user-more { display: none; } }

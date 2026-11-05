@@ -2106,3 +2106,31 @@ tr:last-child td,tr:last-child th {
     margin-top:10px;
   }
 }
+
+/* Footer: brand + line on the left, links on the right. */
+.footer-brand { display:flex; flex-direction:column; gap:10px; }
+.footer-links { display:flex; gap:22px; flex-wrap:wrap; font-size:12px; }
+.footer-links a { color:var(--ia-muted); padding:6px 0; }
+.footer-links a:hover { color:var(--ia-accent); }
+.site-footer .footer-brand p { font-size:11px; color:var(--ia-muted); margin:0; }
+
+/* About page */
+.about-head { padding:70px 0 40px; max-width:760px; }
+.about-head h1 { font-size:56px; line-height:1.02; letter-spacing:-.04em; margin:10px 0 18px; color:var(--ia-strong); }
+.about-head h1 em { color:var(--ia-accent); font-style:normal; }
+.about-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.about-card h2 { font-size:22px; margin:6px 0 10px; color:var(--ia-strong); letter-spacing:-.02em; }
+.about-card p:last-child { margin:0; color:var(--ia-text); line-height:1.55; font-size:14px; }
+.about-company { display:flex; align-items:center; gap:24px; flex-wrap:wrap; margin:40px 0 70px; padding:28px 0; border-top:1px solid var(--ia-line); }
+.about-company p { margin:0; flex:1 1 280px; color:var(--ia-text); font-size:14px; line-height:1.5; }
+.about-logo .ia-co { height:26px; }
+@media(max-width:800px) {
+  .about-grid { grid-template-columns:1fr; }
+  .about-head h1 { font-size:40px; }
+  .site-footer .footer-links { order:3; width:100%; }
+}
+@media(max-width:540px) {
+  .about-head { padding:40px 0 28px; }
+  .about-head h1 { font-size:34px; }
+  .site-header nav { gap:8px; }
+}

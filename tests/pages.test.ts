@@ -11,9 +11,9 @@ async function generated(catalog: any[], action: (dist: string)=>Promise<void>) 
 }
 test('page build produces every public route and reuses the shell theme boot',async()=>{
   await generated([machine],async dist=>{
-    for(const name of ['index.html','login/index.html','me/index.html','teach/index.html','404.html']){
+    for(const name of ['index.html','login/index.html','me/index.html','teach/index.html','about/index.html','404.html']){
       const html=await readFile(join(dist,name),'utf8');
-      expect(html).toContain('name="viewport"');expect(html).toContain('ia:theme');expect(html).toContain('/platform.js');expect(html).toContain('Simulations with real math; independent project.');
+      expect(html).toContain('name="viewport"');expect(html).toContain('ia:theme');expect(html).toContain('/platform.js');expect(html).toContain('Inside AI is built by Noetics.');expect(html).toContain('href="https://noetics.dev"');expect(html).toContain('href="/about/"');expect(html).toContain('/brand/company-logo.png');expect(html).toContain('/brand/company-logo-light.png');
     }
   });
 });

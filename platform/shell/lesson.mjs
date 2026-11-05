@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { head, LOGO, esc, SHELL_CSS } from "./page.mjs";
+import { head, BRAND, esc, SHELL_CSS } from "./page.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const LESSON_CSS = readFileSync(join(HERE, "lesson.css"), "utf8");
@@ -21,7 +21,7 @@ ${head({ title: `${content.title} · Inside AI`, description: content.hook })}
 <body>
 <script>document.body.dataset.theme=document.documentElement.dataset.theme;</script>
 <header class="ia-top">
-  <a class="ia-logo" href="/">${LOGO}<span>Inside AI</span></a>
+  <a class="ia-logo" href="/" aria-label="Inside AI by Noetics, home">${BRAND}</a>
   <span class="ia-crumb">/ lessons / ${esc(content.slug)}</span>
   <div class="ia-top-right">
     <span class="ia-progress" title="Missions complete"><span class="ia-bar" data-ia-bar></span><span data-ia-count>0/${missions.length}</span></span>

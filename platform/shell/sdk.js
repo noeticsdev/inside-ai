@@ -291,7 +291,7 @@ export function createIA({ M, data, root = document }) {
           who.textContent = me.user.name || "My progress";
           who.href = "/me/";
         } else {
-          who.textContent = "Sign in to save progress";
+          who.innerHTML = 'Sign in<span class="ia-user-more"> to save progress</span>';
           who.href = `/login/?next=${encodeURIComponent(location.pathname)}`;
         }
       })
