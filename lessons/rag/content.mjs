@@ -1,5 +1,5 @@
 export default {
- slug:'rag', title:'Build a RAG pipeline', short:'RAG pipeline', subtitle:'chunk · embed · retrieve · pack · cite', layout:'guide', hook:'Build search into a question-answering prompt.', level:'core', minutes:25, order:8, track:'systems',
+ slug:'rag', title:'Build a RAG pipeline', short:'RAG pipeline', subtitle:'chunk · embed · retrieve · pack · cite', layout:'guide', hook:'Build search into a question-answering prompt.', level:'core', minutes:25, order:6, track:'systems',
  bigIdea:'Retrieval-augmented generation combines search with a prompt budget; missing evidence can break an answer.',
  objectives:['Split documents into overlapping chunks and size a vector index.','Rank chunks, repair a retrieval miss, and fit evidence into a context window.','Cite supporting text and refuse when it is missing.'],
  quiz:[

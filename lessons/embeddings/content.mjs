@@ -1,5 +1,5 @@
 export default {
- slug:'embeddings', title:'Build a semantic search index', short:'Semantic search index', subtitle:'embed · normalize · index · top-k', layout:'guide', hook:'Build a small vector index and search it by meaning.', level:'core', minutes:25, order:3, track:'foundations', bigIdea:'An embedding turns text into a direction; search compares that direction with stored directions.',
+ slug:'embeddings', title:'Build a semantic search index', short:'Semantic search index', subtitle:'embed · normalize · index · top-k', layout:'guide', hook:'Build a small vector index and search it by meaning.', level:'core', minutes:25, order:2, track:'foundations', bigIdea:'An embedding turns text into a direction; search compares that direction with stored directions.',
  objectives:['Compute dot products and cosine similarity.','Build and search a normalized vector index.','Compare keyword and vector rankings, then tune a threshold.','Estimate storage and search work.'],
  quiz:[
  {stage:'pre',question:'A query says “puppy”. Which document might a semantic search find without a shared word?',options:['A document about a loan','A document about a young dog','A document about a server','A document about bread'],correct:1,explanation:'The fixed example places young dog close to puppy in vector direction.'},

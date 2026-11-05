@@ -2,7 +2,7 @@ export default {
   slug: 'attention', title: 'Build one attention head', short: 'One attention head',
   subtitle: 'Q · K · V · scale · mask · softmax', layout: 'guide',
   hook: 'Build a causal attention head, one matrix operation at a time.',
-  level: 'core', minutes: 25, order: 4, track: 'models',
+  level: 'core', minutes: 25, order: 3, track: 'models',
   bigIdea: 'Each token scores itself and earlier tokens with dot products, turns those scores into weights, and takes a weighted average of their values.',
   objectives: [
     'Derive Q, K and V from X and three projection matrices.',

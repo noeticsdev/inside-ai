@@ -1,6 +1,6 @@
 export default {
  slug:'sampling', title:'Build a token sampler', short:'Token sampler', subtitle:'logits · temperature · top-k · top-p · draw', layout:'guide',
- hook:'Turn model scores into a token, then build the generation loop.', level:'core', minutes:25, order:8, track:'models',
+ hook:'Turn model scores into a token, then build the generation loop.', level:'core', minutes:25, order:4, track:'models',
  bigIdea:'The model outputs scores; the sampler turns them into one token with a temperature, a cut-off and one random number.',
  objectives:['Compute softmax and see how temperature changes probabilities.','Apply top-k and nucleus filters, renormalize, and draw from a CDF.','Tune a seeded generation loop and implement a sampler in Python.'],
  quiz:[
