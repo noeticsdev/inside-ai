@@ -27,7 +27,6 @@ async function handler(request: Request) {
     return Response.json({ error: 'The account service is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 }
-export const GET = handler;
-export const POST = handler;
-export const HEAD = handler;
-export default handler;
+// Vercel treats a bare default function as a Node (req, res) handler and waits for res.end(),
+// which never comes, so every request timed out. The fetch export is the web-standard form.
+export default { fetch: handler };
