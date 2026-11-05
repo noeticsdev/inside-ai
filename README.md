@@ -69,4 +69,8 @@ The code and lesson content are released under the [MIT License](LICENSE).
 
 The Noetics name and logos (`platform/public/brand/`) are trademarks of Noetics and are not covered by the license. Use them only to refer to Noetics.
 
-`vendor/anatomy/` and `kit/` are the Anatomy drawing kit, MIT License, copyright 2026 Ryan; see the `LICENSE` file in each folder. Python cells load [Pyodide](https://pyodide.org) (MPL-2.0) from its CDN at runtime.
+Third-party code kept under its own license:
+
+- `vendor/anatomy/` and `kit/iso-kit.mjs`, `kit/lathe.mjs`, `kit/tube.mjs`: the Anatomy drawing kit, MIT License, copyright 2026 Ryan (`vendor/anatomy/LICENSE`, `kit/LICENSE`).
+- `vendor/isometric-explainer/` and `kit/ink.mjs`: from [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch), MIT License, copyright 2026 Rohit Ghumare (`vendor/isometric-explainer/LICENSE`). The DeepStream lesson started from that project's streaming-analytics demo.
+- Python cells load [Pyodide](https://pyodide.org) (MPL-2.0) from its CDN at runtime.

@@ -158,4 +158,4 @@ The catalog is generated at build time at `dist/catalog.json`: `[{ slug, title, 
 
 ## License
 
-MIT, see `LICENSE`. The Noetics name and logos in `platform/public/brand/` are not covered by it. `kit/` and `vendor/anatomy/` keep their own MIT license.
+MIT, see `LICENSE`. The Noetics name and logos in `platform/public/brand/` are not covered by it. `kit/`, `vendor/anatomy/` and `vendor/isometric-explainer/` keep their own MIT licenses (Anatomy kit, copyright Ryan; isometric-explainer and `kit/ink.mjs`, copyright Rohit Ghumare). Keep those notices when you copy or move these files.

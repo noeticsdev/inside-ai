@@ -1,3 +1,5 @@
+// From AI Engineering from Scratch (github.com/rohitg00/ai-engineering-from-scratch), MIT License, copyright 2026 Rohit Ghumare.
+// See vendor/isometric-explainer/LICENSE.
 import { iso, segment, slabOf, solidSvg } from "./iso-kit.mjs";
 
 export const PALETTES = {
