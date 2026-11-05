@@ -1,6 +1,8 @@
 # Deploy Inside AI
 
-Merge the real machine folders before a production build. This worktree has only `_template`; `bun scripts/build.mjs` correctly fails until a non-template machine exists. The nine-entry preview in `tests/preview-platform.mjs` is for local design only.
+The recommended setup is **Vercel + Turso** at `edu.noetics.dev`, with DNS on Cloudflare (see "Vercel + Turso" and "Custom domain" below). The Docker image suits any host with a persistent volume.
+
+Before a release, run `bun test`, `bun run build`, `bun tests/lesson-check.mjs <slug>` for each changed lesson, and `bun tests/verify-platform.mjs`.
 
 ## Environment
 
@@ -37,8 +39,19 @@ A local SQLite volume belongs to one application instance. Use a remote database
 3. `functions.includeFiles` includes `dist/catalog.json` so scoring uses the same catalog as the pages. Each warm function reuses its database client and app; cold starts run idempotent migrations. Use a separate Turso database for preview environments.
 4. After a reviewed deployment, check `/`, `/login/`, `/me/`, `/teach/`, `/api/stats`, guest → signup progress retention, class joining, owner-only insights and CSV. Confirm the session cookie has HttpOnly, SameSite=Lax and Secure, and foreign-origin writes return 403.
 
-The adapter and schema are checked locally; this repository has **not** been deployed, and no hosted Turso round-trip or container image build has been run here. Hono's bundled `hono/vercel` adapter is deprecated for a future Hono 5; keep the current Hono 4 dependency until a dependency migration is approved. [libSQL client reference](https://tursodatabase.github.io/libsql-client-ts/).
+The adapter and schema are checked locally, but no hosted Turso round-trip or container image build has been run yet, so treat the first deployment as the real test. Hono's bundled `hono/vercel` adapter is deprecated for a future Hono 5; keep the current Hono 4 dependency until that migration is planned. [libSQL client reference](https://tursodatabase.github.io/libsql-client-ts/).
 
-## Shell integration follow-up
+Vercel's Hobby plan cannot deploy a private repository owned by an organization, and it is for non-commercial use. Use the Pro plan for a company deployment.
 
-The CTO-owned shell currently reads browser progress when a machine opens. To resume account progress on a different device, fetch `/api/progress` and reconcile the machine's saved state before rendering missions and prediction. Dashboard pages already read server and browser progress together. The shell also stops its event sender after a network failure; add retry/reconciliation for reliable synchronization after a transient outage. Keep local progress as the offline fallback.
+## Custom domain: edu.noetics.dev
+
+The noetics.dev zone is on Cloudflare DNS.
+
+1. In the Vercel project, open **Settings → Domains** and add `edu.noetics.dev`.
+2. In Cloudflare DNS for noetics.dev, add a `CNAME` record: name `edu`, target `cname.vercel-dns.com`, proxy status **DNS only** (grey cloud). Vercel issues and renews the HTTPS certificate. Proxying through Cloudflare in front of Vercel can block certificate renewal and caches pages twice.
+3. Wait for Vercel to show the domain as valid, then run the checks in step 4 above on `https://edu.noetics.dev`.
+
+## Known follow-ups
+
+- Lesson pages read progress from the browser when they open. To resume an account's progress on a different device, fetch `/api/progress` and merge it before rendering the steps. Dashboard pages already read server and browser progress together.
+- The event sender stops after a network failure. Add retry and reconciliation so progress syncs after a short outage. Keep local progress as the offline fallback.
